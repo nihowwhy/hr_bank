@@ -1,0 +1,29 @@
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# cache
+/__pycache__
+/service/__pycache__
+/hr_bank/__pycache__
+/hr_bank/spiders/__pycache__
+*.pyc
+*.DS_Store
+.vscode
+.cache
+
+# venv
+/venv
+
+# test
+/tests
+
+# data
+/data
+db.sqlite3
+db.sqlite3-journal
+
+# log
+/Log
+/log
+*.log
+/logs
