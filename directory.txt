@@ -1,0 +1,20 @@
+> Service
+> crawl hr bank data
+> generate format report
+> visualize data
+
+src
+- crawler: read/write table, crawl info
+- dashboard: read table, show table/chart, filter/aggregate function
+- report
+- model
+    - crawler_model
+    - dashboard_model
+    - report_model
+- dao
+- utils
+
+db
+- hr_bank_raw_data_db
+- report_db
+- dashboard_db
