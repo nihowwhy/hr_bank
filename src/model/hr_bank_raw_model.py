@@ -2,22 +2,9 @@ from sqlalchemy import create_engine, Column, Table, ForeignKey, MetaData
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Integer, String, Date, DateTime, Float, Boolean, Text
-from scrapy.utils.project import get_project_settings
 
-SETTINGS = get_project_settings()
+
 Base = declarative_base()
-
-
-def db_connect():
-    ''' Performs database connection using database settings from settings.py.
-    Returns sqlalchemy engine instance
-    '''
-    print(f'>>> DB_CONNECTION_STRING: {SETTINGS.get("DB_CONNECTION_STRING")}')
-    return create_engine(SETTINGS.get('DB_CONNECTION_STRING'))
-
-
-def create_table(engine):
-    Base.metadata.create_all(engine)
 
 
 class TJobPrim(Base):

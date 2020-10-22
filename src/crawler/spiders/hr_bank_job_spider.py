@@ -26,7 +26,7 @@ logging = SETTINGS['logging']
 
 print('>>> Load Reference...')
 def _get_json_file(path):
-    with open(path, 'r') as f:
+    with open(path, 'r', encoding='utf-8') as f:
         return json.loads(f.read())
 
 def _generate_child_node_dict(tree, d={}):
@@ -55,7 +55,6 @@ print('>>> Load Reference... OK!')
 crawl_count = 0
 crawled_job_id_list = []
 crawled_comp_no_list = []
-yield_item_count = 0
 
 class HrBankJobSpider(scrapy.Spider):
     name = 'hr_bank_job'
@@ -65,6 +64,7 @@ class HrBankJobSpider(scrapy.Spider):
         'hunter.104.com.tw',
     ]
     start_urls = ['https://www.104.com.tw/jobs/search/?ro=0&keyword=%E7%88%AC%E8%9F%B2&jobcatExpansionType=0']
+#     start_urls = ['https://www.104.com.tw/jobs/search/?keyword=python&order=1&jobsource=2018indexpoc&ro=0']
 #     start_urls = ['https://www.104.com.tw/jobs/search/?ro=1&jobcat=2007000000&jobcatExpansionType=0&area=6001001000&order=4&asc=1&page=1&mode=s']
 #     start_urls = ['https://www.104.com.tw/jobs/search/?ro=1&jobcat=2007002000&area=6001001000&order=4&asc=1&page=1&mode=s']
     
@@ -195,7 +195,7 @@ class HrBankJobSpider(scrapy.Spider):
         item = response.meta['item']
         job = response.meta['job']
         j = json.loads(response.text)
-        item['job_desc_json'] = 'test_job_desc'
+        item['job_desc_json'] = json.dumps(j, ensure_ascii=False)
         
         # job analysis page
         job_analysis_ajax_link = self._get_job_analysis_ajax_link(job)
@@ -203,20 +203,17 @@ class HrBankJobSpider(scrapy.Spider):
     
     
     def _parse_job_analysis_json_response(self, response):
-        global yield_item_count, crawled_comp_no_list
+        global crawled_comp_no_list
         
         item = response.meta['item']
         job = response.meta['job']
         j = json.loads(response.text)
-        item['job_analysis_json'] = 'test_analysis'
+        item['job_analysis_json'] = json.dumps(j, ensure_ascii=False)
         
         # company description page
         comp_no = item['comp_no']
         # If company no is already in "crawled_comp_no_list", then skip request and yield item.
         if comp_no in crawled_comp_no_list:
-            yield_item_count += 1
-            if yield_item_count % 100 == 0:
-                print(f'>>> Already return {yield_item_count:,d} job information.')
             yield item
         else:
             crawled_comp_no_list.append(comp_no)
@@ -228,15 +225,9 @@ class HrBankJobSpider(scrapy.Spider):
     
     
     def _parse_company_json_response(self, response):
-        global yield_item_count
-        
         item = response.meta['item']
         j = json.loads(response.text)
-        item['comp_desc_json'] = 'test_comp_desc'
-        
-        yield_item_count += 1
-        if yield_item_count % 100 == 0:
-            print(f'>>> Already return {yield_item_count:,d} job information.')
+        item['comp_desc_json'] = json.dumps(j, ensure_ascii=False)
         yield item
 
     

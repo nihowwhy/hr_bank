@@ -10,8 +10,8 @@ from scrapy.exceptions import DropItem
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import and_
 
-from crawler.models import db_connect, create_table, TJobPrim, TJobDesc, TCompDesc
-
+from dao.dao import db_connect, create_table
+from model.hr_bank_raw_model import TJobPrim, TJobDesc, TCompDesc
 
 
 class JobCrawlerPipeline(object):
@@ -56,20 +56,20 @@ class JobCrawlerPipeline(object):
             job_desc.job_desc_json = item['job_desc_json']
             job_desc.job_analysis_json = item['job_analysis_json']
             job_desc.crawl_date = item['crawl_date']
+            
+            if exist_comp is None:
+                # COMP_DESC table
+                comp_desc = TCompDesc()
+                comp_desc.comp_no = item['comp_no']
+                comp_desc.comp_desc_json = item['comp_desc_json']
+                comp_desc.crawl_date = item['crawl_date']
         else:
             msg = f"Duplicate job found: [{item['job_id']}] {item['job_name']}"
 #             print(msg)
             raise DropItem(msg)
             session.close()
-            
-        if exist_comp is None:
-            # COMP_DESC table
-            comp_desc = TCompDesc()
-            comp_desc.comp_no = item['comp_no']
-            comp_desc.comp_desc_json = item['comp_desc_json']
-            comp_desc.crawl_date = item['crawl_date']
-        else:
-            pass
+            return
+
 
         try:
             if exist_comp is None:
@@ -84,13 +84,21 @@ class JobCrawlerPipeline(object):
             raise
 
         finally:
+            self._vacuum_db()
             session.close()
 
-        return item
+        return 
+    
+    
+    def _vacuum_db(self):
+        session = self.Session() 
+        cursor = session.connection.cursor()
+        cursor.execute('VACUUM')
     
     
     def close_spider(self, spider):
         stats = spider.crawler.stats.get_stats()
-        stats = json.dumps(stats, indent=2)
+        stats = json.dumps(stats, indent=2, default=str)
         print('[Close Spider]')
         print(f'Stats:\n{stats}')
+        
