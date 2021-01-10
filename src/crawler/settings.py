@@ -8,8 +8,9 @@
 #     https://docs.scrapy.org/en/latest/topics/settings.html
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+import os
 
-CONFIG_INI_DIR = './config.ini'
+CONFIG_INI_DIR = '../config.ini'
 
 BOT_NAME = 'crawler'
 
@@ -104,13 +105,18 @@ print(f'>>> PROJECT NAME: {project_name}')
 # config.ini setting
 log_folder = config['setting']['log_folder']
 db_folder = config['setting']['db_folder']
-db_name = config['setting']['db_name']
+db_name = config['setting']['hr_bank_db_name']
+
+# directory init
+if not os.path.exists(log_folder):
+    os.makedirs(log_folder)
+if not os.path.exists(db_folder):
+    os.makedirs(db_folder)
 
 # logging
 from logging.handlers import TimedRotatingFileHandler
 from scrapy.utils.log import configure_logging
 import logging
-import os
 log_filepath = os.path.join(log_folder, 'hr_bank_crawler.log')
 logHandler = TimedRotatingFileHandler(log_filepath, when='midnight', interval=10)
 configure_logging(install_root_handler=False)
@@ -128,3 +134,4 @@ DB_CONNECTION_STRING = f'sqlite:///{db_folder}/{db_name}'
 #      port='',
 #      db_name='hr_bank_db',
 # )
+

@@ -12,6 +12,7 @@ from datetime import datetime
 from crawler.items import HrBankJobItem
 
 
+TODAY_DATE = int(datetime.now().strftime('%Y%m%d'))
 MAX_TOTAL_PAGE = 150
 DEFAULT_QUERY_PARAM = {
     # not recommended to change
@@ -43,9 +44,9 @@ def _generate_child_node_dict(tree, d={}):
         d[root] = nodes    
     return d
 
-JSON_JOBCAT_ROOT = _get_json_file('crawler/reference/jsonJobCatRoot')
-JSON_AREA_ROOT = _get_json_file('crawler/reference/jsonAreaRoot')
-JSON_INDUST_ROOT = _get_json_file('crawler/reference/jsonIndustRoot')
+JSON_JOBCAT_ROOT = _get_json_file('reference/jsonJobCatRoot')
+JSON_AREA_ROOT = _get_json_file('reference/jsonAreaRoot')
+JSON_INDUST_ROOT = _get_json_file('reference/jsonIndustRoot')
 CHILD_AREA_MAP_DICT = _generate_child_node_dict(JSON_AREA_ROOT)
 CHILD_JOBCAT_MAP_DICT = _generate_child_node_dict(JSON_JOBCAT_ROOT)
 CHILD_INDUST_MAP_DICT = _generate_child_node_dict(JSON_INDUST_ROOT)
@@ -57,13 +58,14 @@ crawled_job_id_list = []
 crawled_comp_no_list = []
 
 class HrBankJobSpider(scrapy.Spider):
-    name = 'hr_bank_job'
+    name = 'hr_bank_spider'
     allowed_domains = ['104.com.tw']
     denied_netloc = [
         'tutor.104.com.tw',
         'hunter.104.com.tw',
     ]
-    start_urls = ['https://www.104.com.tw/jobs/search/?ro=0&keyword=%E7%88%AC%E8%9F%B2&jobcatExpansionType=0']
+    start_urls = ['https://www.104.com.tw/jobs/search/?ro=0&keyword=%E7%88%AC%E8%9F%B2&jobcatExpansionType=0'] # search "crawler"
+#     start_urls = ['https://www.104.com.tw/jobs/search/?ro=0&keyword=%E7%B2%BE%E7%AE%97&expansionType=area%2Cspec%2Ccom%2Cjob%2Cwf%2Cwktm&order=1&asc=0&page=1&mode=s&jobsource=2018indexpoc'] # search "actuarial"
 #     start_urls = ['https://www.104.com.tw/jobs/search/?keyword=python&order=1&jobsource=2018indexpoc&ro=0']
 #     start_urls = ['https://www.104.com.tw/jobs/search/?ro=1&jobcat=2007000000&jobcatExpansionType=0&area=6001001000&order=4&asc=1&page=1&mode=s']
 #     start_urls = ['https://www.104.com.tw/jobs/search/?ro=1&jobcat=2007002000&area=6001001000&order=4&asc=1&page=1&mode=s']
@@ -154,9 +156,12 @@ class HrBankJobSpider(scrapy.Spider):
                 job_link = job['link']['job']
                 if urlparse(job_link).netloc in self.denied_netloc:
                     continue
-
-                # parse search page
+                
+                # init item
                 item = HrBankJobItem()
+                item['meta'] = {}
+                
+                # parse search page
                 item = self._parse_search_job_json_response(item, job)
 
                 # job description page
@@ -186,7 +191,7 @@ class HrBankJobSpider(scrapy.Spider):
         item['indust_no'] = str(j['coIndustry'])
         item['indust_desc'] = j['coIndustryDesc']
         item['appear_date'] = int(j['appearDate'])
-        item['crawl_date'] = int(datetime.now().strftime('%Y%m%d'))
+        item['crawl_date'] = TODAY_DATE
         
         return item
     
@@ -212,10 +217,13 @@ class HrBankJobSpider(scrapy.Spider):
         
         # company description page
         comp_no = item['comp_no']
-        # If company no is already in "crawled_comp_no_list", then skip request and yield item.
+        
+        # If "company no" is already in "crawled_comp_no_list", then skip request and yield item.
         if comp_no in crawled_comp_no_list:
+            item['meta']['is_ignore_comp'] = False
             yield item
         else:
+            item['meta']['is_ignore_comp'] = True
             crawled_comp_no_list.append(comp_no)
             company_ajax_link = self._get_company_ajax_link(job)
             yield Request(company_ajax_link, 
@@ -236,7 +244,7 @@ class HrBankJobSpider(scrapy.Spider):
         try:
             return re.search('job\/(.*)\?', link).group(1)
         except:
-            print('There is no JOB_ID. Link:', link)
+            print(f'There is no JOB_ID. (link: {link})')
             return None
         
             
@@ -245,7 +253,7 @@ class HrBankJobSpider(scrapy.Spider):
         try:
             return re.search('company/(.*)\?', link).group(1)
         except:
-            print('There is no COMP_ID. Link:', link)
+            print(f'There is no COMP_ID. (link: {link})')
             return None
         
     

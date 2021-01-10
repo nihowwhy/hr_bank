@@ -5,8 +5,10 @@
 
 src
 - crawler: read/write table, crawl info
+- data_preparation
 - dashboard: read table, show table/chart, filter/aggregate function
 - report
+
 - model
     - crawler_model
     - dashboard_model

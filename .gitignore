@@ -10,6 +10,8 @@
 *.DS_Store
 .vscode
 .cache
+/temp
+*/__pycache__
 
 # venv
 /venv
@@ -28,3 +30,4 @@ db.sqlite3-journal
 /log
 *.log
 /logs
+

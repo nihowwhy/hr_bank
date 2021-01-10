@@ -9,9 +9,13 @@ import json
 from scrapy.exceptions import DropItem
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import and_
+from scrapy.utils.project import get_project_settings
 
-from dao.dao import db_connect, create_table
-from model.hr_bank_raw_model import TJobPrim, TJobDesc, TCompDesc
+from model.model import db_connect, create_table, TRawSearch, TRawJob, TRawJobAnalysis, TRawComp
+
+
+SETTINGS = get_project_settings()
+DB_CONNECTION_STRING = SETTINGS.get('DB_CONNECTION_STRING')
 
 
 class JobCrawlerPipeline(object):
@@ -20,7 +24,7 @@ class JobCrawlerPipeline(object):
         ''' Initialize database connection and sessionmaker
         Creates tables
         '''
-        engine = db_connect()
+        engine = db_connect(DB_CONNECTION_STRING)
         create_table(engine)
         self.Session = sessionmaker(bind=engine)
 
@@ -28,72 +32,75 @@ class JobCrawlerPipeline(object):
     def process_item(self, item, spider):
         session = self.Session()
         
+        # keys
         job_no = item['job_no']
         comp_no = item['comp_no']
         crawl_date = item['crawl_date']
-
-        exist_job = session.query(TJobPrim).filter_by(job_no=job_no, crawl_date=crawl_date).first()     # if job exists
-        exist_comp = session.query(TCompDesc).filter_by(comp_no=comp_no, crawl_date=crawl_date).first() # if company exists
         
-        if exist_job is None:
-            # JOB_PRIM table
-            job_prim = TJobPrim()
-            job_prim.job_no = item['job_no']
-            job_prim.job_id = item['job_id']
-            job_prim.job_name = item['job_name']
-            job_prim.comp_no = item['comp_no']
-            job_prim.comp_id = item['comp_id']
-            job_prim.comp_name = item['comp_name']
-            job_prim.indust_no = item['indust_no']
-            job_prim.indust_desc = item['indust_desc']
-            job_prim.appear_date = item['appear_date']
-            job_prim.crawl_date = item['crawl_date']
+        # if data exists
+        is_t_raw_search_exist = bool(session.query(TRawSearch).filter_by(job_no=job_no, crawl_date=crawl_date).first())
+        is_t_raw_job_exist = bool(session.query(TRawJob).filter_by(job_no=job_no, crawl_date=crawl_date).first())
+        is_t_raw_job_analysis_exist = bool(session.query(TRawJobAnalysis).filter_by(job_no=job_no, crawl_date=crawl_date).first())
+        is_t_raw_comp_exist = bool(session.query(TRawComp).filter_by(comp_no=comp_no, crawl_date=crawl_date).first())
+        
+        # if data does not exist, then set data to table object and list.
+        table_object_list = []
+        
+        if is_t_raw_search_exist == False:
+            t_raw_search = TRawSearch()
+            t_raw_search.job_no = job_no
+            t_raw_search.crawl_date = crawl_date
+            t_raw_search.json_string = item['search_job_json']
+            table_object_list.append(t_raw_search)
             
-            # JOB_DESC table
-            job_desc = TJobDesc()
-            job_desc.job_no = item['job_no']
-            job_desc.search_job_json = item['search_job_json']
-            job_desc.job_desc_json = item['job_desc_json']
-            job_desc.job_analysis_json = item['job_analysis_json']
-            job_desc.crawl_date = item['crawl_date']
+        if is_t_raw_job_exist == False:
+            t_raw_job = TRawJob()
+            t_raw_job.job_no = job_no
+            t_raw_job.crawl_date = crawl_date
+            t_raw_job.json_string = item['job_desc_json']
+            table_object_list.append(t_raw_job)
             
-            if exist_comp is None:
-                # COMP_DESC table
-                comp_desc = TCompDesc()
-                comp_desc.comp_no = item['comp_no']
-                comp_desc.comp_desc_json = item['comp_desc_json']
-                comp_desc.crawl_date = item['crawl_date']
-        else:
+        if is_t_raw_job_analysis_exist == False:
+            t_raw_job_analysis = TRawJobAnalysis()
+            t_raw_job_analysis.job_no = job_no
+            t_raw_job_analysis.crawl_date = crawl_date
+            t_raw_job_analysis.json_string = item['job_analysis_json']
+            table_object_list.append(t_raw_job_analysis)
+        
+        is_ignore_comp = item['meta']['is_ignore_comp']
+        if (is_t_raw_comp_exist == False) and (is_ignore_comp == True):
+            t_raw_comp = TRawComp()
+            t_raw_comp.comp_no = comp_no
+            t_raw_comp.crawl_date = crawl_date
+            t_raw_comp.json_string = item['comp_desc_json']
+            table_object_list.append(t_raw_comp)
+        
+        # if job exists in all job tables, then return. 
+        if all([is_t_raw_search_exist, is_t_raw_job_exist, is_t_raw_job_analysis_exist]):
             msg = f"Duplicate job found: [{item['job_id']}] {item['job_name']}"
-#             print(msg)
-            raise DropItem(msg)
             session.close()
+            raise DropItem(msg)
             return
-
-
+        
+        # save data
         try:
-            if exist_comp is None:
-                objs = [job_prim, job_desc, comp_desc]
-            else:
-                objs = [job_prim, job_desc]
-            session.add_all(objs)
-            session.commit()
+            if table_object_list:
+                session.add_all(table_object_list)
+                session.commit()
 
         except:
             session.rollback()
             raise
 
         finally:
-            self._vacuum_db()
+#             self._vacuum_db()
             session.close()
-
-        return 
+            return 
     
     
     def _vacuum_db(self):
         session = self.Session() 
-        cursor = session.connection.cursor()
-        cursor.execute('VACUUM')
+        session.execute('VACUUM')
     
     
     def close_spider(self, spider):
@@ -101,4 +108,5 @@ class JobCrawlerPipeline(object):
         stats = json.dumps(stats, indent=2, default=str)
         print('[Close Spider]')
         print(f'Stats:\n{stats}')
-        
+       
+    
