@@ -30,6 +30,7 @@ with open('reference/indust_breakdown_json.txt', 'r') as f:
     INDUST_BREAKDOWN_DICT = json.loads(f.read())
 
 crawled_count = 0
+crawled_company_urls = []
 
 class HrBankSpider(scrapy.Spider):
     name = "104"
@@ -71,7 +72,7 @@ class HrBankSpider(scrapy.Spider):
 
         for job in job_list:
             # init item
-            item = HrBankCrawlerItem() # todo: scrapy item
+            item = HrBankCrawlerItem() # scrapy item
 
             # set search page (one job) to item
             item['search_page'] = job
@@ -136,16 +137,19 @@ class HrBankSpider(scrapy.Spider):
             # set analysis page to item
             analysis_page_json = json.loads(clean_text(response.text))
             item = response.meta['item']
-            item['analysis_page'] = analysis_page_json ## json.dumps(analysis_page_json, ensure_ascii=False)
+            item['analysis_page'] = analysis_page_json
         except:
             print('>>> Failed to get Job Analysis Page Response.')
         finally:
-            # send request to analysis page ajax link
+            # send request to company page ajax link, if it has not been crawled.
             link = response.meta['link']
-            yield Request(url=link['company_ajax_link'],
-                            callback=self.parse_company_ajax_response,
-                            meta={'item': item, 'link': link},
-                            dont_filter=True)
+            if link['company_ajax_link'] in crawled_company_urls:
+                yield item
+            else:
+                yield Request(url=link['company_ajax_link'],
+                                callback=self.parse_company_ajax_response,
+                                meta={'item': item, 'link': link},
+                                dont_filter=True)
 
 
     def parse_company_ajax_response(self, response):
@@ -157,10 +161,15 @@ class HrBankSpider(scrapy.Spider):
             # set company page to item
             company_page_json = json.loads(clean_text(response.text))
             item = response.meta['item']
-            item['company_page'] = company_page_json ## json.dumps(company_page_json, ensure_ascii=False)
+            item['company_page'] = company_page_json
         except:
             print('>>> Failed to get Company Page Response.')
         finally:
+            # add company url to crawled list
+            global crawled_company_urls
+            link = response.meta['link']
+            crawled_company_urls.append(link['company_ajax_link'])
+
             # yield item to pipeline
             yield item
 
