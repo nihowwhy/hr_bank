@@ -140,6 +140,8 @@ class HrBankCrawlerPipeline:
             t_job.appear_date = parsed_item['appear_date']
             t_job.crawl_date = crawl_date
 
+            if is_job_exist == False:
+                session.add(t_job)
             session.commit()
 
         except Exception as e:
@@ -181,6 +183,8 @@ class HrBankCrawlerPipeline:
             t_job_analysis.skill_json = parsed_item['skill_json']
             t_job_analysis.cert_json = parsed_item['cert_json']
 
+            if is_job_analysis_exist == False:
+                session.add(t_job_analysis)
             session.commit()
 
         except Exception as e:
@@ -225,6 +229,8 @@ class HrBankCrawlerPipeline:
             t_company.company_addr = parsed_item['company_addr']
             t_company.crawl_date = crawl_date
 
+            if is_company_exist == False:
+                session.add(t_company)
             session.commit()
 
         except Exception as e:
@@ -400,6 +406,9 @@ class HrBankCrawlerPipeline:
             print(e)
 
         # Company Page
+        # If skip crawling company page, then return "parsed_item".
+        if 'company_page' not in item.keys():
+            return parsed_item
         try:
             # 產業描述
             parsed_item['industry_desc'] = item['company_page']['data']['industryDesc']
