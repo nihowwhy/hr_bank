@@ -45,6 +45,7 @@ class HrBankCrawlerPipeline:
         parsed_item = self.parse_item(item)
         job_no = parsed_item['job_no']
         job_id = parsed_item['job_id']
+        update_date = parsed_item.get('update_date', crawl_date) # job analysis table column
         company_no = parsed_item['company_no']
         company_id = parsed_item['company_id']
 
@@ -53,7 +54,7 @@ class HrBankCrawlerPipeline:
             t_job = session.query(TJob).filter_by(job_no=job_no, job_id=job_id, crawl_date=crawl_date).first()
             is_already_crawl_job = bool(t_job)
 
-            t_job_analysis = session.query(TJobAnalysis).filter_by(job_no=job_no, job_id=job_id, crawl_date=crawl_date).first()
+            t_job_analysis = session.query(TJobAnalysis).filter_by(job_no=job_no, job_id=job_id, update_date=update_date).first()
             is_already_crawl_job_analysis = bool(t_job_analysis)
 
             t_company = session.query(TCompany).filter_by(company_no=company_no, company_id=company_id, crawl_date=crawl_date).first()
