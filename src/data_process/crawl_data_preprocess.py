@@ -59,12 +59,20 @@ class CrawlDataProcessor:
                 # 需求人數
                 need_count_desc = result.need_count_desc
                 need_count_max, need_count_min = get_need_count_max_and_min(need_count_desc)
+                need_count = int((need_count_max + need_count_min) / 2)
                 result.need_count_max = need_count_max
                 result.need_count_min = need_count_min
+                result.need_count = need_count
 
                 # 薪資類型
                 salary_type = result.salary_type
                 result.salary_type_desc = convert_salary_type_code_to_desc(salary_type)
+
+                # 估算薪水
+                salary_max = result.salary_max
+                salary_min = result.salary_min
+                salary = convert_salary_to_estimated_monthly_salary(salary_min, salary_max, salary_type)
+                result.salary = salary
 
                 # 工作類型
                 # todo
@@ -155,12 +163,12 @@ def get_need_count_max_and_min(need_count_desc):
 
     need_count_list = re.findall('\d+', need_count_desc)
     if len(need_count_list) == 2: # n~m人 -> min: n, max: m
-        need_count_min = need_count_list[0]
-        need_count_max = need_count_list[1]
+        need_count_min = int(need_count_list[0])
+        need_count_max = int(need_count_list[1])
 
     elif len(need_count_list) == 1: # n人以上 -> min: n, max: n
-        need_count_min = need_count_list[0]
-        need_count_max = need_count_list[0]
+        need_count_min = int(need_count_list[0])
+        need_count_max = int(need_count_list[0])
 
     elif len(need_count_list) == 0: # 不限 -> min: 1, max: 1
         need_count_min = 1
@@ -173,6 +181,39 @@ def get_need_count_max_and_min(need_count_desc):
 def convert_salary_type_code_to_desc(salary_type):
     salary_type_mapping = MAPPING['salary_type_mapping']
     return salary_type_mapping.get(salary_type, salary_type)
+
+
+# 估算月薪
+def convert_salary_to_estimated_monthly_salary(salary_min, salary_max, salary_type):
+    # convert 面議、時薪、日薪、月薪、年薪 to estimated monthly salary
+    if salary_type not in ['10', '30', '40', '50', '60']: # 面議、時薪、日薪、月薪、年薪
+        return None
+
+    # 9999999 means above
+    if salary_max == 9999999:
+        salary_max = salary_min
+
+    # 面議
+    if salary_type == '10':
+        return 45000 # minimum negociation salary
+
+    # 時薪
+    if salary_type == '30':
+        salary = int((salary_max + salary_min) / 2 * 72) # 1週18小時，共4週 = 72小時(1個月)
+
+    # 日薪
+    if salary_type == '40':
+        salary = int((salary_max + salary_min) / 2 * 12) # 1週3天，共4週 = 12天(1個月)
+
+    # 月薪
+    if salary_type == '50':
+        salary = int((salary_max + salary_min) / 2)
+
+    # 年薪
+    if salary_type == '60':
+        salary = int((salary_max + salary_min) / 2 / 12) # 12 months
+
+    return salary
 
 
 # 工作類型
