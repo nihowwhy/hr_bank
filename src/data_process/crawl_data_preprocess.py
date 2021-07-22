@@ -3,11 +3,12 @@ sys.path.append('.')
 # sys.path.append('..')
 
 import re
+import json
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import and_, func
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from model.model import db_connect, create_table, TJob, TJobAnalysis, TCompany
+from model.model import db_connect, create_table, TJob, TJobAnalysis, TCompany, TDashboard
 from config.config import DB_CONNECTION_STRING
 from reference.hr_bank_code_mapping import MAPPING
 
@@ -42,6 +43,7 @@ class CrawlDataProcessor:
         self.process_t_job()
         self.process_t_job_all()
         self.process_t_company()
+        self.process_t_dashboard()
 
 
     def process_t_job(self):
@@ -154,6 +156,147 @@ class CrawlDataProcessor:
         session.close()
 
 
+    def process_t_dashboard(self):
+        session = self.Session()
+
+        # 可選範圍更新
+        max_update_date = session.query(func.max(TJobAnalysis.update_date)).scalar()
+        min_update_date = session.query(func.min(TJobAnalysis.update_date)).scalar()
+        print(f'Date Range: {min_update_date} ~ {max_update_date}')
+
+        # get start window date
+        if True:
+            start_window_date = get_last_monday_date(min_update_date) # update all data
+        else:
+            start_window_date = timedelta_date_int(max_update_date, days=-30) # default: last 30 days
+
+        # get end window date
+        end_window_date = timedelta_date_int(start_window_date, days=6)
+
+        # get weeks between start-window-date and max-update-date
+        weeks = calculate_weeks_between_two_date(convert_int_to_date(start_window_date), convert_int_to_date(max_update_date))
+
+        # query "job_id" in job analysis, which "update_date" is larger than "start_window_date".
+        results = session.query(TJobAnalysis).filter(TJobAnalysis.update_date >= start_window_date).all()
+        select_job_ids = [result.job_id for result in results]
+
+        # loop every week within date range
+        for _ in range(weeks + 1):
+
+            print(f'Process Date: {start_window_date} ~ {end_window_date}')
+
+            for select_job_id in select_job_ids:
+
+                # query job analysis date between "start_window_date" and "end_window_date"
+                result = session.query(
+                            TJobAnalysis, TJob
+                        ).filter(
+                            (TJobAnalysis.job_id == select_job_id) & (TJob.job_id == select_job_id)
+                        ).filter(
+                            (TJobAnalysis.update_date >= start_window_date) & (TJobAnalysis.update_date <= end_window_date)
+                        ).filter(
+                            TJobAnalysis.job_id == TJob.job_id # resolve cartesian product problem
+                        ).first()
+
+                if result is None:
+                    continue
+
+                job_no = result.TJobAnalysis.job_no
+                job_id = result.TJobAnalysis.job_id
+                represent_date = start_window_date
+
+                # get table object
+                t_dashboard_session = self.Session()
+                t_dashboard = t_dashboard_session.query(TDashboard).filter_by(job_no=job_no, job_id=job_id, represent_date=represent_date).first()
+
+                # upsert data
+                is_data_exist = bool(t_dashboard)
+                try:
+                    if is_data_exist == False:
+                        t_dashboard = TDashboard()
+                        t_dashboard.job_no = job_no
+                        t_dashboard.job_id = job_id
+                        t_dashboard.represent_date = represent_date
+
+                    # represent date range
+                    t_dashboard.represent_date_min = start_window_date
+                    t_dashboard.represent_date_max = end_window_date
+
+                    # job, company
+                    t_dashboard.job_name = result.TJobAnalysis.job_name
+                    t_dashboard.company_id = result.TJob.company_id
+                    t_dashboard.company_no = result.TJob.company_no
+                    t_dashboard.company_name = result.TJob.company_name
+
+                    # salary, need_count, apply_count
+                    t_dashboard.salary = result.TJob.salary
+                    t_dashboard.need_count = result.TJob.need_count
+                    t_dashboard.apply_count = result.TJob.apply_count
+
+                    # sex
+                    t_dashboard.sex_male = get_count_from_json('男', result.TJobAnalysis.sex_json)
+                    t_dashboard.sex_female = get_count_from_json('女', result.TJobAnalysis.sex_json)
+
+                    # education
+                    t_dashboard.edu_junior = get_count_from_json('國中(含)以下', result.TJobAnalysis.edu_json)
+                    t_dashboard.edu_senior = get_count_from_json('高中職', result.TJobAnalysis.edu_json) + get_count_from_json('專科', result.TJobAnalysis.edu_json)
+                    t_dashboard.edu_undergrad = get_count_from_json('大學', result.TJobAnalysis.edu_json)
+                    t_dashboard.edu_grad = get_count_from_json('博碩士', result.TJobAnalysis.edu_json)
+
+                    # age
+                    t_dashboard.age_00_20 = get_count_from_json('20歲以下', result.TJobAnalysis.age_json)
+                    t_dashboard.age_21_25 = get_count_from_json('21~25歲', result.TJobAnalysis.age_json)
+                    t_dashboard.age_26_30 = get_count_from_json('26~30歲', result.TJobAnalysis.age_json)
+                    t_dashboard.age_31_35 = get_count_from_json('31~35歲', result.TJobAnalysis.age_json)
+                    t_dashboard.age_36_40 = get_count_from_json('36~40歲', result.TJobAnalysis.age_json)
+                    t_dashboard.age_41_45 = get_count_from_json('41~45歲', result.TJobAnalysis.age_json)
+                    t_dashboard.age_46_50 = get_count_from_json('46~50歲', result.TJobAnalysis.age_json)
+                    t_dashboard.age_51_55 = get_count_from_json('51~55歲', result.TJobAnalysis.age_json)
+                    t_dashboard.age_56_60 = get_count_from_json('56~60歲', result.TJobAnalysis.age_json)
+                    t_dashboard.age_60_99 = get_count_from_json('60歲以上', result.TJobAnalysis.age_json)
+
+                    # work experience
+                    t_dashboard.work_exp_0 = get_count_from_json('無工作經驗', result.TJobAnalysis.work_exp_json)
+                    t_dashboard.work_exp_00_01 = get_count_from_json('1年以下', result.TJobAnalysis.work_exp_json)
+                    t_dashboard.work_exp_01_03 = get_count_from_json('1~3年 ', result.TJobAnalysis.work_exp_json)
+                    t_dashboard.work_exp_03_05 = get_count_from_json('3~5年', result.TJobAnalysis.work_exp_json)
+                    t_dashboard.work_exp_05_10 = get_count_from_json('5~10年', result.TJobAnalysis.work_exp_json)
+                    t_dashboard.work_exp_10_15 = get_count_from_json('10~15年', result.TJobAnalysis.work_exp_json)
+                    t_dashboard.work_exp_15_20 = get_count_from_json('15~20年', result.TJobAnalysis.work_exp_json)
+                    t_dashboard.work_exp_20_25 = get_count_from_json('20~25年', result.TJobAnalysis.work_exp_json)
+                    t_dashboard.work_exp_25_99 = get_count_from_json('25年以上', result.TJobAnalysis.work_exp_json)
+
+                    # major
+                    t_dashboard.major_info_mgmt = get_count_from_json('資訊管理相關', result.TJobAnalysis.major_json)
+                    t_dashboard.major_cs = get_count_from_json('資訊工程相關', result.TJobAnalysis.major_json)
+                    t_dashboard.major_stat = get_count_from_json('統計學相關', result.TJobAnalysis.major_json)
+                    t_dashboard.major_math_stat = get_count_from_json('數理統計相關', result.TJobAnalysis.major_json)
+
+                    # skill
+                    t_dashboard.skill_java = get_count_from_json('Java', result.TJobAnalysis.skill_json)
+                    t_dashboard.skill_python = get_count_from_json('Python', result.TJobAnalysis.skill_json)
+
+                    # language
+                    t_dashboard.lang_eng = get_count_from_json('英文', result.TJobAnalysis.lang_json)
+                    t_dashboard.lang_japan = get_count_from_json('日文', result.TJobAnalysis.lang_json)
+                    t_dashboard.lang_korean = get_count_from_json('韓文', result.TJobAnalysis.lang_json)
+
+                    if is_data_exist == False:
+                        t_dashboard_session.add(t_dashboard)
+                    t_dashboard_session.commit()
+
+                except Exception as e:
+                    print(e)
+
+                finally:
+                    t_dashboard_session.close()
+
+            # moving window dates by 7 days
+            start_window_date = timedelta_date_int(start_window_date, days=7)
+            end_window_date = timedelta_date_int(end_window_date, days=7)
+
+        session.close()
+
 
 # T_JOB =========================================
 # 需求人數
@@ -185,17 +328,24 @@ def convert_salary_type_code_to_desc(salary_type):
 
 # 估算月薪
 def convert_salary_to_estimated_monthly_salary(salary_min, salary_max, salary_type):
+    # https://www.mol.gov.tw/media/5760435/no57-%E6%B4%BB%E7%94%A8%E6%B3%95%E8%A6%8F-%E9%9B%87%E4%B8%BB%E6%8B%9B%E5%8B%9F%E5%93%A1%E5%B7%A5%E7%B6%93%E5%B8%B8%E6%80%A7%E8%96%AA%E8%B3%874-%E8%90%AC%E5%85%83%E4%BB%A5%E4%B8%8B-%E6%87%89%E5%85%AC%E9%96%8B%E6%8E%B2%E7%A4%BA%E6%88%96%E5%91%8A%E7%9F%A5%E8%96%AA%E8%B3%87%E7%AF%84%E5%9C%8D.pdf
+    # https://web.ntpu.edu.tw/~stou/class/ntpu/Group7-Fall-2011.pdf
+
     # convert 面議、時薪、日薪、月薪、年薪 to estimated monthly salary
     if salary_type not in ['10', '30', '40', '50', '60']: # 面議、時薪、日薪、月薪、年薪
         return None
+
+    # 面議
+    if salary_type == '10':
+        return 45000 # minimum negociation salary
 
     # 9999999 means above
     if salary_max == 9999999:
         salary_max = salary_min
 
-    # 面議
-    if salary_type == '10':
-        return 45000 # minimum negociation salary
+    # If salary_max is larger than salary_min by 25%, then set 125% of salary_min as salary_max.
+    if salary_max / salary_min > 1.25:
+        salary_max = salary_min * 1.25
 
     # 時薪
     if salary_type == '30':
@@ -248,6 +398,55 @@ def convert_company_name_to_company_group(company_name):
     return company_group_mapping.get(company_name, None)
 # ===============================================
 
+
+# T_DASHBOARD ===================================
+def get_last_monday_date(date_int):
+    date = convert_int_to_date(date_int)
+    weekday = date.weekday()
+    monday_date = date + timedelta(days=-weekday)
+    monday_date_int = convert_date_to_int(monday_date)
+    return monday_date_int
+
+
+def convert_date_to_int(date):
+    ''' From datetime.datetime(2021, 7, 19, 0, 0) to 20210719
+    '''
+    return int(date.strftime('%Y%m%d'))
+
+
+def convert_int_to_date(date_int):
+    ''' From 20210719 to datetime.datetime(2021, 7, 19, 0, 0)
+    '''
+    year = int(date_int / 10000)
+    month = int(date_int / 100) % 100
+    day = int(date_int) % 100
+    return datetime(year=year, month=month, day=day)
+
+
+def timedelta_date_int(date_int, **kwarg):
+    ''' Using function "datetime.timedelta" to calculate new date by "days, weeks"
+    timedelta_date_int(20210719, days=7) -> 20210726
+    '''
+    date = convert_int_to_date(date_int)
+    new_date = date + timedelta(**kwarg)
+    return convert_date_to_int(new_date)
+
+
+def calculate_weeks_between_two_date(date1, date2):
+    ''' Return 0 if both dates fall within one week, 1 if two dates fall on two consecutive weeks, etc.
+    '''
+    monday1 = date1 - timedelta(days=date1.weekday())
+    monday2 = date2 - timedelta(days=date2.weekday())
+    return int((monday2 - monday1).days / 7)
+
+
+def get_count_from_json(key, json_string):
+    data_dict = json.loads(json_string)
+    for _, value_dict in data_dict.items():
+        if key in value_dict.keys():
+            return int(value_dict[key])
+    return 0
+# ===============================================
 
 if __name__ == '__main__':
     processor = CrawlDataProcessor()

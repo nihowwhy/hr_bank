@@ -24,20 +24,20 @@ def run():
     # initial check
     print(f'>>> Initial Check...')
     init_check()
-    
+
     # crawl data
     print(f'>>> Start Crawling...')
     crawl_hr_bank_website()
     print('>>> Crawling Job Done!')
-    
+
     # process crawl data
     print(f'>>> Start Process Data...')
-    crawl_data_processor = CrawlDataProcessor()
-    crawl_data_processor.process() # "process_date"(int)-> default: Today Date, 0 means process all data, or YYYYMMDD
-    
-    
+    crawl_data_processor = CrawlDataProcessor(process_date=0)  # "process_date"(int)-> default: Today Date, 0 means process all data, or YYYYMMDD
+    crawl_data_processor.process()
+
+
 if __name__ == '__main__':
     run()
-    
+
 
 
