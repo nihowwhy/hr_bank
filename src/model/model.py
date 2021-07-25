@@ -127,6 +127,7 @@ class TDashboard(Base):
 
     job_id = Column('JOB_ID', String, primary_key=True)
     job_no = Column('JOB_NO', String, primary_key=True)
+
     represent_date = Column('REPRESENT_DATE', Integer, primary_key=True)
     represent_date_min = Column('REPRESENT_DATE_MIN', Integer)
     represent_date_max = Column('REPRESENT_DATE_MAX', Integer)
@@ -173,3 +174,5 @@ class TDashboard(Base):
     lang_eng = Column('LANG_ENG', Integer)
     lang_japan = Column('LANG_JAPAN', Integer)
     lang_korean = Column('LANG_KOREAN', Integer)
+    crawl_date = Column('CRAWL_DATE', Integer)
+    update_date = Column('UPDATE_DATE', Integer)

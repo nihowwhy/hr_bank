@@ -21,8 +21,8 @@ class CrawlDataProcessor:
     def __init__(self, **kwarg):
 
         # get the date which want to process data, if "process_date"=0, it means process all data.
-        if 'process_all' in kwarg.keys():
-            if kwarg['process_all'] == True:
+        if 'process_all_date' in kwarg.keys():
+            if kwarg['process_all_date'] == True:
                 self.process_date = 0
         elif 'process_date' in kwarg.keys():
             self.process_date = int(kwarg['process_date'])
@@ -41,12 +41,14 @@ class CrawlDataProcessor:
 
     def process(self):
         self.process_t_job()
-        self.process_t_job_all()
+        self.process_t_job_batch()
         self.process_t_company()
         self.process_t_dashboard()
 
 
     def process_t_job(self):
+        # update job data according to "process_date"
+
         session = self.Session()
 
         # Filter process data by "process_date".
@@ -102,7 +104,9 @@ class CrawlDataProcessor:
         session.close()
 
 
-    def process_t_job_all(self):
+    def process_t_job_batch(self):
+        # update job exist information
+
         session = self.Session()
 
         max_crawl_date = session.query(func.max(TJob.crawl_date)).scalar()
@@ -157,18 +161,21 @@ class CrawlDataProcessor:
 
 
     def process_t_dashboard(self):
+
         session = self.Session()
 
-        # 可選範圍更新
-        max_update_date = session.query(func.max(TJobAnalysis.update_date)).scalar()
-        min_update_date = session.query(func.min(TJobAnalysis.update_date)).scalar()
-        print(f'Date Range: {min_update_date} ~ {max_update_date}')
+        # Filter process data by "process_date".
+        if self.process_date:
+            max_update_date = session.query(func.max(TJobAnalysis.update_date)).scalar()
+            min_update_date = self.process_date
+        else:
+            max_update_date = session.query(func.max(TJobAnalysis.update_date)).scalar()
+            min_update_date = session.query(func.min(TJobAnalysis.update_date)).scalar()
+            print(f'Date Range: {min_update_date} ~ {max_update_date}')
 
         # get start window date
-        if True:
-            start_window_date = get_last_monday_date(min_update_date) # update all data
-        else:
-            start_window_date = timedelta_date_int(max_update_date, days=-30) # default: last 30 days
+        start_window_date = get_last_monday_date(min_update_date)
+        # start_window_date = timedelta_date_int(max_update_date, days=-30) # default: last 30 days
 
         # get end window date
         end_window_date = timedelta_date_int(start_window_date, days=6)
@@ -280,6 +287,10 @@ class CrawlDataProcessor:
                     t_dashboard.lang_eng = get_count_from_json('英文', result.TJobAnalysis.lang_json)
                     t_dashboard.lang_japan = get_count_from_json('日文', result.TJobAnalysis.lang_json)
                     t_dashboard.lang_korean = get_count_from_json('韓文', result.TJobAnalysis.lang_json)
+
+                    # time info
+                    t_dashboard.crawl_date = result.TJobAnalysis.crawl_date
+                    t_dashboard.update_date = result.TJobAnalysis.update_date
 
                     if is_data_exist == False:
                         t_dashboard_session.add(t_dashboard)

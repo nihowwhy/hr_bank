@@ -32,7 +32,7 @@ def run():
 
     # process crawl data
     print(f'>>> Start Process Data...')
-    crawl_data_processor = CrawlDataProcessor(process_date=0)  # "process_date"(int)-> default: Today Date, 0 means process all data, or YYYYMMDD
+    crawl_data_processor = CrawlDataProcessor(process_all_date=True)  # "process_date"(int)-> default: Today Date, 0 means process all data, or YYYYMMDD
     crawl_data_processor.process()
 
 
