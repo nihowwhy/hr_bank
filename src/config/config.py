@@ -28,6 +28,7 @@ if not os.path.exists(DB_FOLDER):
 
 
 # database setting
+DB_PATH = f'{DB_FOLDER}/{DB_NAME}'
 DB_CONNECTION_STRING = f'sqlite:///{DB_FOLDER}/{DB_NAME}'
 # DB_CONNECTION_STRING = '{drivername}://{user}:{passwd}@{host}:{port}/{db_name}?charset=utf8'.format(
 #      drivername="sqlite",

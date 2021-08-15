@@ -9,6 +9,10 @@ scrapy = "*"
 pytest = "*"
 requests = "*"
 sqlalchemy = "*"
+dash = "*"
+dash-table = "*"
+dash-bootstrap-components = "*"
+pandas = "==0.23.4"
 
 [dev-packages]
 
