@@ -16,8 +16,9 @@ print(f'>>> PROJECT NAME: {PROJECT_NAME}')
 
 # config.ini setting
 LOG_FOLDER = config['setting']['log_folder']
-DB_FOLDER = config['setting']['db_folder']
+DB_FOLDER = config['setting']['data_folder']
 DB_NAME = config['setting']['db_name']
+DATA_FOLDER = config['setting']['data_folder']
 
 
 # directory init
@@ -25,6 +26,8 @@ if not os.path.exists(LOG_FOLDER):
     os.makedirs(LOG_FOLDER)
 if not os.path.exists(DB_FOLDER):
     os.makedirs(DB_FOLDER)
+# todo: raw json folders
+
 
 
 # database setting

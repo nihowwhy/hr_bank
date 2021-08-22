@@ -20,6 +20,8 @@ SETTINGS = get_project_settings()
 DB_CONNECTION_STRING = SETTINGS.get('DB_CONNECTION_STRING')
 TODAY_DATE = int(datetime.now().strftime('%Y%m%d'))
 
+
+# Database Pipeline
 class HrBankCrawlerPipeline:
 
     def __init__(self):
@@ -569,3 +571,40 @@ def join_list_of_element(l: list) -> str:
     '''
     return '、'.join(l)
 # =================================================
+
+
+# Json File Pipeline
+import os
+
+DATA_FOLDER = SETTINGS.get('DATA_FOLDER')
+
+class HrBankCrawlerJsonPipeline:
+
+    def __init__(self):
+        self.save_folder = DATA_FOLDER
+        self.raw_data_folder = os.path.join(self.save_folder, 'raw_data')
+
+
+    def process_item(self, item, spider):
+
+        try:
+            # key value
+            job_id = re.search('job\/(.*)\?', item['search_page']['link']['job']).group(1)
+            crawl_date = TODAY_DATE
+
+            # filename
+            filename = f'{crawl_date}_{job_id}.json'
+            filepath = os.path.join(self.raw_data_folder, filename)
+            is_file_exist = os.path.exists(filepath)
+
+            # save json
+            if not is_file_exist:
+                with open(filepath, mode='w', encoding='utf-8') as f:
+                    j = json.dumps(dict(item))
+                    f.write(j)
+
+        except Exception as e:
+            print(e)
+
+        finally:
+            return

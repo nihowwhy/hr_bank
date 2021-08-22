@@ -64,7 +64,8 @@ DOWNLOADER_MIDDLEWARES = {
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   'hr_bank_crawler.pipelines.HrBankCrawlerPipeline': 300,
+   # 'hr_bank_crawler.pipelines.HrBankCrawlerPipeline': 300,
+   'hr_bank_crawler.pipelines.HrBankCrawlerJsonPipeline': 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -89,7 +90,7 @@ ITEM_PIPELINES = {
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 
-from config.config import LOG_FOLDER, DB_CONNECTION_STRING
+from config.config import LOG_FOLDER, DB_CONNECTION_STRING, DATA_FOLDER
 
 import os
 
@@ -106,3 +107,4 @@ LOG_LEVEL = 'WARNING'# 'ERROR'
 
 # database setting
 DB_CONNECTION_STRING = DB_CONNECTION_STRING
+DATA_FOLDER = DATA_FOLDER

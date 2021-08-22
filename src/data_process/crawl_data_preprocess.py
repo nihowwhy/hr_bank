@@ -459,6 +459,520 @@ def get_count_from_json(key, json_string):
     return 0
 # ===============================================
 
+
+# Json Processor
+import os
+import pandas as pd
+
+from config.config import LOG_FOLDER, DB_CONNECTION_STRING, DATA_FOLDER
+
+
+class CrawlDataJsonProcessor:
+
+    def __init__(self, **kwarg):
+
+        # get the date which want to process data, if "process_date"=0, it means process all data.
+        if 'process_all_date' in kwarg.keys():
+            if kwarg['process_all_date'] == True:
+                self.process_date = 0
+        elif 'process_date' in kwarg.keys():
+            self.process_date = int(kwarg['process_date'])
+        else:
+            self.process_date = TODAY_DATE
+
+        # setting path
+        self.data_folder = DATA_FOLDER
+        self.raw_data_folder = os.path.join(DATA_FOLDER, 'raw_data')
+        self.excel_data_folder = os.path.join(DATA_FOLDER, 'excel_data')
+
+
+    def process(self):
+        # filter json files
+        self.raw_data_filepaths = self.get_raw_data_filepath_list()
+
+        # convert json files to dataframe
+        result_df = self.convert_json_data_to_dataframe()
+
+        # save dataframe to excel
+        output_filename = f'{self.process_date}_output.xlsx'
+        output_path = os.path.join(self.excel_data_folder, output_filename)
+        self.save_dataframe_to_excel(result_df, output_path)
+
+
+    def get_raw_data_filepath_list(self):
+        filenames = os.listdir(self.raw_data_folder)
+        filepaths = []
+        if self.process_date:
+            for filename in filenames:
+                if filename.split('_')[0] == str(self.process_date):
+                    filepaths.append(os.path.join(self.raw_data_folder, filename))
+        else:
+            for filename in filenames:
+                filepaths.append(os.path.join(self.raw_data_folder, filename))
+        return filepaths
+
+
+    def convert_json_data_to_dataframe(self):
+        result_df = pd.DataFrame()
+
+        for filepath in self.raw_data_filepaths:
+            # read data
+            with open(filepath, 'r') as f:
+                j = f.read()
+                item = json.loads(j)
+
+            # parse json data
+            parsed_item = self.parse_item(item)
+            parsed_item = self.filter_result_dataframe_columns(parsed_item)
+            item_df = pd.DataFrame([parsed_item], columns=parsed_item.keys())
+
+            # add parsed data to dataframe
+            if len(result_df) == 0:
+                result_df = item_df
+            result_df = result_df.append(item_df, ignore_index=True)
+
+        print(f'>>> Total Jobs: {len(result_df)}')
+        return result_df
+
+
+    def filter_result_dataframe_columns(self, item):
+        # remove analysis raw json
+        item.pop('sex_json', None)
+        item.pop('edu_json', None)
+        item.pop('age_json', None)
+        item.pop('work_exp_json', None)
+        item.pop('lang_json', None)
+        item.pop('major_json', None)
+        item.pop('skill_json', None)
+        item.pop('cert_json', None)
+
+        return item
+
+
+    @staticmethod
+    def save_dataframe_to_excel(output_df, output_path):
+        with pd.ExcelWriter(output_path) as writer:
+            output_df.to_excel(writer, index=False, encoding='utf8')
+
+
+    @staticmethod
+    def parse_item(item):
+        parsed_item = {}
+
+        # Search Page
+        try:
+            # 職缺ID
+            parsed_item['job_id'] = re.search('job\/(.*)\?', item['search_page']['link']['job']).group(1)
+
+            # 職缺編號
+            parsed_item['job_no'] = item['search_page']['jobNo']
+
+            # 職缺名稱
+            parsed_item['job_name'] = item['search_page']['jobName']
+
+            # 公司ID
+            parsed_item['company_id'] = re.search('company/(.*)\?', item['search_page']['link']['cust']).group(1)
+
+            # 公司名稱
+            parsed_item['company_name'] = item['search_page']['custName']
+
+            # 公司編號
+            parsed_item['company_no'] = item['search_page']['custNo']
+
+            # 應徵人數
+            parsed_item['apply_count'] = int(item['search_page']['applyCnt'])
+
+            # 最低薪資
+            parsed_item['salary_min'] = int(item['search_page']['salaryLow'])
+
+            # 最高薪資
+            parsed_item['salary_max'] = int(item['search_page']['salaryHigh'])
+
+            # 薪資描述
+            parsed_item['salary_desc'] = item['search_page']['salaryDesc']
+
+            # 薪資類型code
+            parsed_item['salary_type'] = item['search_page']['s10']
+
+            # 薪資類型desc (derived)
+            salary_type = parsed_item['salary_type']
+            parsed_item['salary_type_desc'] = convert_salary_type_code_to_desc(salary_type)
+
+            # 估算薪水 (derived)
+            salary_max = parsed_item['salary_max']
+            salary_min = parsed_item['salary_min']
+            salary = convert_salary_to_estimated_monthly_salary(salary_min, salary_max, salary_type)
+            parsed_item['salary'] = salary
+
+            # 職缺說明
+            parsed_item['job_desc'] = item['search_page']['description']
+
+            # 職缺類別
+            parsed_item['job_type'] = item['search_page']['jobType']
+
+            # 工作類型code
+            parsed_item['job_role'] = item['search_page']['jobRole']
+
+            # 工作類型 (derived)
+            # todo
+            job_role = parsed_item['job_role']
+            parsed_item['job_role_desc'] = convert_job_role_code_to_desc(job_role)
+
+            # 學歷要求
+            parsed_item['edu'] = item['search_page']['optionEdu']
+
+            # 經驗要求
+            parsed_item['work_exp'] = int(item['search_page']['period'])
+
+            # 工作縣市
+            parsed_item['job_addr_dist'] = item['search_page']['jobAddrNoDesc']
+
+            # 工作地點
+            parsed_item['job_addr'] = item['search_page']['jobAddrNoDesc'] + item['search_page']['jobAddress']
+
+            # 工作地區 (derived)
+            job_addr_dist = parsed_item['job_addr_dist']
+            parsed_item['job_addr_area'] = convert_addr_to_area(job_addr_dist)
+
+            # 經度
+            parsed_item['lon'] = item['search_page']['lon']
+
+            # 緯度
+            parsed_item['lat'] = item['search_page']['lat']
+
+            # 出現日期
+            parsed_item['appear_date'] = int(item['search_page']['appearDate'])
+        except Exception as e:
+            print(e)
+
+        # Job Page
+        try:
+            # 工作類型
+            parsed_item['job_cat'] = join_list_of_dict_item(item['job_page']['data']['jobDetail']['jobCategory'], 'code')
+
+            # 工作類型
+            parsed_item['job_cat_desc'] = join_list_of_dict_item(item['job_page']['data']['jobDetail']['jobCategory'], 'description')
+
+            # 需求人數描述 
+            parsed_item['need_count_desc'] = item['job_page']['data']['jobDetail']['needEmp']
+
+            # 需求人數max, min, count (derived)
+            need_count_desc = parsed_item['need_count_desc']
+            need_count_max, need_count_min = get_need_count_max_and_min(need_count_desc)
+            need_count = int((need_count_max + need_count_min) / 2)
+            parsed_item['need_count_max'] = need_count_max
+            parsed_item['need_count_min'] = need_count_min
+            parsed_item['need_count'] = need_count
+
+            # 技能要求
+            parsed_item['skill'] = join_list_of_dict_item(item['job_page']['data']['condition']['skill'], 'description')
+
+            # 專長要求
+            parsed_item['specialty'] = join_list_of_dict_item(item['job_page']['data']['condition']['specialty'], 'description')
+
+            # 科系要求
+            parsed_item['major'] = join_list_of_element(item['job_page']['data']['condition']['major'])
+
+            # 語言要求
+            parsed_item['lang'] = get_language_requirement(item['job_page']['data']['condition']['language'])
+
+            # 地方語言要求
+            parsed_item['local_lang'] = get_language_requirement(item['job_page']['data']['condition']['localLanguage'])
+
+            # 證照要求
+            parsed_item['cert'] = join_list_of_element(item['job_page']['data']['condition']['certificate'])
+
+            # 駕照要求
+            parsed_item['driver_license'] = join_list_of_element(item['job_page']['data']['condition']['driverLicense'])
+
+            # 其他要求
+            parsed_item['other'] = item['job_page']['data']['condition']['other']
+
+            # 接受身份
+            parsed_item['accept_role'] = join_list_of_dict_item(item['job_page']['data']['condition']['acceptRole']['role'], 'description')
+
+            # 婉拒身份
+            parsed_item['disaccept_role'] = join_list_of_dict_item(item['job_page']['data']['condition']['acceptRole']['disRole']['disability'], 'type')
+
+            # 管理責任
+            parsed_item['manage_resp'] = item['job_page']['data']['jobDetail']['manageResp']
+
+            # 出差外派
+            parsed_item['business_trip'] = item['job_page']['data']['jobDetail']['businessTrip']
+
+            # 上班時段
+            parsed_item['work_period'] = item['job_page']['data']['jobDetail']['workPeriod']
+
+            # 休假制度
+            parsed_item['vacation_policy'] = item['job_page']['data']['jobDetail']['vacationPolicy']
+
+            # 可上班日
+            parsed_item['start_work_day'] = item['job_page']['data']['jobDetail']['startWorkingDay']
+
+            # 產業編號
+            parsed_item['industry_no'] = item['job_page']['data']['industryNo']
+
+            # 職缺分類 (derived)
+            # todo
+
+        except Exception as e:
+            print(e)
+
+        # Job Analysis Page
+        try:
+            # 更新日期
+            parsed_item['update_date'] = get_update_date(item['analysis_page']['sex']['update_time'])
+
+            # 性別json
+            parsed_item['sex_json'] = json.dumps(format_basic_analysis_dict(item['analysis_page']['sex']), ensure_ascii=False)
+
+            # 學歷json
+            parsed_item['edu_json'] = json.dumps(format_basic_analysis_dict(item['analysis_page']['edu']), ensure_ascii=False)
+
+            # 年齡json
+            parsed_item['age_json'] = json.dumps(format_basic_analysis_dict(item['analysis_page']['yearRange']), ensure_ascii=False)
+
+            # 工作經驗json
+            parsed_item['work_exp_json'] = json.dumps(format_basic_analysis_dict(item['analysis_page']['exp']), ensure_ascii=False)
+
+            # 語言json
+            parsed_item['lang_json'] = json.dumps(format_language_analysis_dict(item['analysis_page']['language']), ensure_ascii=False)
+
+            # 科系json
+            parsed_item['major_json'] = json.dumps(format_option_analysis_dict(item['analysis_page']['major'], 'major'), ensure_ascii=False)
+
+            # 技能json
+            parsed_item['skill_json'] = json.dumps(format_option_analysis_dict(item['analysis_page']['skill'], 'skill'), ensure_ascii=False)
+
+            # 證照json
+            parsed_item['cert_json'] = json.dumps(format_option_analysis_dict(item['analysis_page']['cert'], 'cert'), ensure_ascii=False)
+
+            # sex
+            parsed_item['sex_male'] = get_count_from_json('男', parsed_item['sex_json'])
+            parsed_item['sex_female'] = get_count_from_json('女', parsed_item['sex_json'])
+
+            # education
+            parsed_item['edu_junior'] = get_count_from_json('國中(含)以下', parsed_item['edu_json'])
+            parsed_item['edu_senior'] = get_count_from_json('高中職', parsed_item['edu_json']) + get_count_from_json('專科', parsed_item['edu_json'])
+            parsed_item['edu_undergrad'] = get_count_from_json('大學', parsed_item['edu_json'])
+            parsed_item['edu_grad'] = get_count_from_json('博碩士', parsed_item['edu_json'])
+
+            # age
+            parsed_item['age_00_20'] = get_count_from_json('20歲以下', parsed_item['age_json'])
+            parsed_item['age_21_25'] = get_count_from_json('21~25歲', parsed_item['age_json'])
+            parsed_item['age_26_30'] = get_count_from_json('26~30歲', parsed_item['age_json'])
+            parsed_item['age_31_35'] = get_count_from_json('31~35歲', parsed_item['age_json'])
+            parsed_item['age_36_40'] = get_count_from_json('36~40歲', parsed_item['age_json'])
+            parsed_item['age_41_45'] = get_count_from_json('41~45歲', parsed_item['age_json'])
+            parsed_item['age_46_50'] = get_count_from_json('46~50歲', parsed_item['age_json'])
+            parsed_item['age_51_55'] = get_count_from_json('51~55歲', parsed_item['age_json'])
+            parsed_item['age_56_60'] = get_count_from_json('56~60歲', parsed_item['age_json'])
+            parsed_item['age_60_99'] = get_count_from_json('60歲以上', parsed_item['age_json'])
+
+            # work experience
+            parsed_item['work_exp_0'] = get_count_from_json('無工作經驗', parsed_item['work_exp_json'])
+            parsed_item['work_exp_00_01'] = get_count_from_json('1年以下', parsed_item['work_exp_json'])
+            parsed_item['work_exp_01_03'] = get_count_from_json('1~3年 ', parsed_item['work_exp_json'])
+            parsed_item['work_exp_03_05'] = get_count_from_json('3~5年', parsed_item['work_exp_json'])
+            parsed_item['work_exp_05_10'] = get_count_from_json('5~10年', parsed_item['work_exp_json'])
+            parsed_item['work_exp_10_15'] = get_count_from_json('10~15年', parsed_item['work_exp_json'])
+            parsed_item['work_exp_15_20'] = get_count_from_json('15~20年', parsed_item['work_exp_json'])
+            parsed_item['work_exp_20_25'] = get_count_from_json('20~25年', parsed_item['work_exp_json'])
+            parsed_item['work_exp_25_99'] = get_count_from_json('25年以上', parsed_item['work_exp_json'])
+
+            # major
+            parsed_item['major_info_mgmt'] = get_count_from_json('資訊管理相關', parsed_item['major_json'])
+            parsed_item['major_cs'] = get_count_from_json('資訊工程相關', parsed_item['major_json'])
+            parsed_item['major_stat'] = get_count_from_json('統計學相關', parsed_item['major_json'])
+            parsed_item['major_math_stat'] = get_count_from_json('數理統計相關', parsed_item['major_json'])
+
+            # skill
+            parsed_item['skill_java'] = get_count_from_json('Java', parsed_item['skill_json'])
+            parsed_item['skill_python'] = get_count_from_json('Python', parsed_item['skill_json'])
+
+            # language
+            parsed_item['lang_eng'] = get_count_from_json('英文', parsed_item['lang_json'])
+            parsed_item['lang_japan'] = get_count_from_json('日文', parsed_item['lang_json'])
+            parsed_item['lang_korean'] = get_count_from_json('韓文', parsed_item['lang_json'])
+
+        except Exception as e:
+            print(e)
+
+        # Company Page
+        # If skip crawling company page, then return "parsed_item".
+        if 'company_page' not in item.keys():
+            return parsed_item
+        try:
+            # 產業描述
+            parsed_item['industry_desc'] = item['company_page']['data']['industryDesc']
+
+            # 產業類別
+            parsed_item['industry_cat'] = item['company_page']['data']['indcat']
+
+            # 員工人數
+            parsed_item['emp_count_desc'] = item['company_page']['data']['empNo']
+
+            # 資本額
+            parsed_item['capital'] = item['company_page']['data']['capital']
+
+            # 公司介紹
+            parsed_item['profile'] = item['company_page']['data']['profile']
+
+            # 主要商品
+            parsed_item['product'] = item['company_page']['data']['product']
+
+            # 經營理念
+            parsed_item['management'] = item['company_page']['data']['management']
+
+            # 福利介紹
+            parsed_item['welfare'] = item['company_page']['data']['welfare']
+
+            # 福利標籤
+            parsed_item['welfare_tag'] = join_list_of_element(item['company_page']['data']['tagNames'])
+
+            # 法定標籤
+            parsed_item['legal_tag'] = join_list_of_element(item['company_page']['data']['legalTagNames'])
+
+            # 公司縣市
+            parsed_item['company_addr_dist'] = item['company_page']['data']['addrNoDesc']
+
+            # 公司地點
+            parsed_item['company_addr'] = item['company_page']['data']['address']
+
+            # 公司地區 (derived)
+            company_addr = parsed_item['company_addr']
+            parsed_item['company_addr_area'] = convert_addr_to_area(company_addr)
+
+            # 公司集團 (derived)
+            company_name = parsed_item['company_name']
+            parsed_item['company_group'] = convert_company_name_to_company_group(company_name)
+
+        except Exception as e:
+            print(e)
+
+        return parsed_item
+
+
+def get_language_requirement(language_list):
+    ''' If a language requirement is "精通", then add the language to the list.
+    '''
+    if len(language_list) == 0:
+        return ''
+
+    required_lang_list = []
+    for lang in language_list:
+        if '精通' in lang['ability']:
+            required_lang_list.append(lang['language'])
+    return join_list_of_element(required_lang_list)
+
+
+def get_update_date(update_time_string):
+    ''' From "2021-07-04 02:00:27" to 20210704
+    '''
+    update_date = ''.join(re.findall('\d+', update_time_string[:10]))
+    return int(update_date)
+
+
+def format_basic_analysis_dict(analysis_dict):
+    ''' format sample: {0: {'男': 3}, 1: {'女': 4}}
+    '''
+    sequence_num = 0
+    formatted_analysis_dict = {}
+    for serial, record in analysis_dict.items():
+        if not serial.isdigit():
+            continue
+
+        has_record_value = False
+        for record_name, record_value in record.items():
+            if 'Name' in record_name:
+                record_name_desc = record_value
+            elif 'count' in record_name:
+                record_count = int(record_value)
+                has_record_value = True
+                formatted_analysis_dict[sequence_num] = {}
+
+        if has_record_value:
+            formatted_analysis_dict[sequence_num][record_name_desc] = record_count
+            sequence_num += 1
+
+    return formatted_analysis_dict
+
+
+def format_language_analysis_dict(analysis_dict):
+    ''' format sample: {0: {'中文': 2}}
+    Only if level is up to "精通", then add the language to the dictionary.
+    '''
+    sequence_num = 0
+    formatted_analysis_dict = {}
+    for serial, record in analysis_dict.items():
+        if not serial.isdigit():
+            continue
+
+        has_record_value = False
+        for record_name, record_value in record.items():
+            if 'Name' in record_name:
+                record_name_desc = record_value
+            elif 'count' in record_name:
+                record_count = int(record_value)
+            elif 'level' in record_name:
+                if '精通' in str(record_value):
+                    has_record_value = True
+                    formatted_analysis_dict[sequence_num] = {}
+
+        if has_record_value:
+            formatted_analysis_dict[sequence_num][record_name_desc] = record_count
+            sequence_num += 1
+
+    return formatted_analysis_dict
+
+
+def format_option_analysis_dict(analysis_dict, analysis_type):
+    ''' format sample: {0: {'3018001000': 2, '普通科': 2}, 1: {'3006001000': 1, '一般商業學類': 1}}
+    '''
+    sequence_num = 0
+    formatted_analysis_dict = {}
+    for serial, record in analysis_dict.items():
+        if not serial.isdigit():
+            continue
+
+        has_record_value = False
+        for record_name, record_value in record.items():
+            if analysis_type == record_name:
+                record_name_no = record_value
+            elif 'Name' in record_name:
+                record_name_desc = record_value
+            elif 'count' in record_name:
+                record_count = int(record_value)
+                has_record_value = True
+                formatted_analysis_dict[sequence_num] = {}
+
+        if has_record_value:
+            formatted_analysis_dict[sequence_num][record_name_no] = record_count
+            formatted_analysis_dict[sequence_num][record_name_desc] = record_count
+            sequence_num += 1
+
+    return formatted_analysis_dict
+
+
+# utils ===========================================
+def join_list_of_dict_item(l: list, key: str):
+    ''' input:  l = [{"name": "Ian"}, {"name": "Wang"}]
+                key = 'name'
+        output: "Ian、Wang"
+    '''
+    dict_item_list = [d[key] for d in l]
+    return '、'.join(dict_item_list)
+
+
+def join_list_of_element(l: list) -> str:
+    ''' input:  ["A", "B", "C"]
+        output: "A、B、C"
+    '''
+    return '、'.join(l)
+# =================================================
+
+
 if __name__ == '__main__':
-    processor = CrawlDataProcessor()
+    # processor = CrawlDataProcessor()
+    processor = CrawlDataJsonProcessor()
     processor.process()
