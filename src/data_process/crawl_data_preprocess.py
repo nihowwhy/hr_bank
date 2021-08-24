@@ -19,6 +19,8 @@ TODAY_DATE = int(datetime.now().strftime('%Y%m%d'))
 class CrawlDataProcessor:
 
     def __init__(self, **kwarg):
+        ''' "process_date"(int)-> default: Today Date, 0 means process all data, or YYYYMMDD
+        '''
 
         # get the date which want to process data, if "process_date"=0, it means process all data.
         if 'process_all_date' in kwarg.keys():
@@ -470,6 +472,10 @@ from config.config import LOG_FOLDER, DB_CONNECTION_STRING, DATA_FOLDER
 class CrawlDataJsonProcessor:
 
     def __init__(self, **kwarg):
+        '''
+        param: process_date (int) -> default is Today Date, 0 means process all data, or YYYYMMDD
+        param: process_all_date (bool) -> If True, then process all data.
+        '''
 
         # get the date which want to process data, if "process_date"=0, it means process all data.
         if 'process_all_date' in kwarg.keys():
@@ -486,17 +492,25 @@ class CrawlDataJsonProcessor:
         self.excel_data_folder = os.path.join(DATA_FOLDER, 'excel_data')
 
 
-    def process(self):
+    def process(self, **kwarg):
         # filter json files
         self.raw_data_filepaths = self.get_raw_data_filepath_list()
 
         # convert json files to dataframe
-        result_df = self.convert_json_data_to_dataframe()
+        job_result_df, company_result_df = self.convert_json_data_to_dataframe()
 
-        # save dataframe to excel
-        output_filename = f'{self.process_date}_output.xlsx'
-        output_path = os.path.join(self.excel_data_folder, output_filename)
-        self.save_dataframe_to_excel(result_df, output_path)
+        # save job dataframe to excel
+        job_output_filename = f'{self.process_date}_job_output.xlsx'
+        output_path = os.path.join(self.excel_data_folder, job_output_filename)
+        self.save_dataframe_to_excel(job_result_df, output_path)
+
+        # save company dataframe to excel
+        company_output_filename = f'{self.process_date}_company_output.xlsx'
+        output_path = os.path.join(self.excel_data_folder, company_output_filename)
+        self.save_dataframe_to_excel(company_result_df, output_path)
+
+        # if delete json data files
+        # todo
 
 
     def get_raw_data_filepath_list(self):
@@ -513,7 +527,8 @@ class CrawlDataJsonProcessor:
 
 
     def convert_json_data_to_dataframe(self):
-        result_df = pd.DataFrame()
+        job_result_df = pd.DataFrame()
+        company_result_df = pd.DataFrame()
 
         for filepath in self.raw_data_filepaths:
             # read data
@@ -522,17 +537,32 @@ class CrawlDataJsonProcessor:
                 item = json.loads(j)
 
             # parse json data
-            parsed_item = self.parse_item(item)
-            parsed_item = self.filter_result_dataframe_columns(parsed_item)
-            item_df = pd.DataFrame([parsed_item], columns=parsed_item.keys())
+            job_item, company_item = self.parse_item(item)
+            job_item = self.filter_result_dataframe_columns(job_item)
+            job_item_df = pd.DataFrame([job_item], columns=job_item.keys())
 
-            # add parsed data to dataframe
-            if len(result_df) == 0:
-                result_df = item_df
-            result_df = result_df.append(item_df, ignore_index=True, sort=False)
+            # add job parsed data to dataframe
+            if len(job_result_df) == 0:
+                job_result_df = job_item_df
+            job_result_df = job_result_df.append(job_item_df, ignore_index=True, sort=False)
 
-        print(f'>>> Total Jobs: {len(result_df)}')
-        return result_df
+            # check company item exists
+            if company_item is None:
+                continue
+            company_item_df = pd.DataFrame([company_item], columns=company_item.keys())
+
+            # add company parsed data to dataframe
+            if len(company_result_df) == 0:
+                company_result_df = pd.DataFrame([company_item], columns=company_item.keys())
+            company_result_df = company_result_df.append(company_item_df, ignore_index=True, sort=False)
+
+        # drop duplicates
+        job_result_df = job_result_df.drop_duplicates(subset=['job_id'])
+        company_result_df = company_result_df.drop_duplicates(subset=['company_id'])
+
+        print(f'>>> Total Job: {len(job_result_df)}')
+        print(f'>>> Total Company: {len(company_result_df)}')
+        return job_result_df, company_result_df
 
 
     def filter_result_dataframe_columns(self, item):
@@ -558,6 +588,7 @@ class CrawlDataJsonProcessor:
     @staticmethod
     def parse_item(item):
         parsed_item = {}
+        company_item = {}
 
         # Search Page
         try:
@@ -572,12 +603,15 @@ class CrawlDataJsonProcessor:
 
             # 公司ID
             parsed_item['company_id'] = re.search('company/(.*)\?', item['search_page']['link']['cust']).group(1)
+            company_item['company_id'] = re.search('company/(.*)\?', item['search_page']['link']['cust']).group(1)
 
             # 公司名稱
             parsed_item['company_name'] = item['search_page']['custName']
+            company_item['company_name'] = item['search_page']['custName']
 
             # 公司編號
             parsed_item['company_no'] = item['search_page']['custNo']
+            company_item['company_no'] = item['search_page']['custNo']
 
             # 應徵人數
             parsed_item['apply_count'] = int(item['search_page']['applyCnt'])
@@ -711,6 +745,7 @@ class CrawlDataJsonProcessor:
 
             # 產業編號
             parsed_item['industry_no'] = item['job_page']['data']['industryNo']
+            company_item['industry_no'] = item['job_page']['data']['industryNo']
 
             # 職缺分類 (derived)
             # todo
@@ -804,53 +839,67 @@ class CrawlDataJsonProcessor:
             return parsed_item
         try:
             # 產業描述
-            parsed_item['industry_desc'] = item['company_page']['data']['industryDesc']
+            # parsed_item['industry_desc'] = item['company_page']['data']['industryDesc']
+            company_item['industry_desc'] = item['company_page']['data']['industryDesc']
 
             # 產業類別
-            parsed_item['industry_cat'] = item['company_page']['data']['indcat']
+            # parsed_item['industry_cat'] = item['company_page']['data']['indcat']
+            company_item['industry_cat'] = item['company_page']['data']['indcat']
 
             # 員工人數
-            parsed_item['emp_count_desc'] = item['company_page']['data']['empNo']
+            # parsed_item['emp_count_desc'] = item['company_page']['data']['empNo']
+            company_item['emp_count_desc'] = item['company_page']['data']['empNo']
 
             # 資本額
-            parsed_item['capital'] = item['company_page']['data']['capital']
+            # parsed_item['capital'] = item['company_page']['data']['capital']
+            company_item['capital'] = item['company_page']['data']['capital']
 
             # 公司介紹
-            parsed_item['profile'] = item['company_page']['data']['profile']
+            # parsed_item['profile'] = item['company_page']['data']['profile']
+            company_item['profile'] = item['company_page']['data']['profile']
 
             # 主要商品
-            parsed_item['product'] = item['company_page']['data']['product']
+            # parsed_item['product'] = item['company_page']['data']['product']
+            company_item['product'] = item['company_page']['data']['product']
 
             # 經營理念
-            parsed_item['management'] = item['company_page']['data']['management']
+            # parsed_item['management'] = item['company_page']['data']['management']
+            company_item['management'] = item['company_page']['data']['management']
 
             # 福利介紹
-            parsed_item['welfare'] = item['company_page']['data']['welfare']
+            # parsed_item['welfare'] = item['company_page']['data']['welfare']
+            company_item['welfare'] = item['company_page']['data']['welfare']
 
             # 福利標籤
-            parsed_item['welfare_tag'] = join_list_of_element(item['company_page']['data']['tagNames'])
+            # parsed_item['welfare_tag'] = join_list_of_element(item['company_page']['data']['tagNames'])
+            company_item['welfare_tag'] = join_list_of_element(item['company_page']['data']['tagNames'])
 
             # 法定標籤
-            parsed_item['legal_tag'] = join_list_of_element(item['company_page']['data']['legalTagNames'])
+            # parsed_item['legal_tag'] = join_list_of_element(item['company_page']['data']['legalTagNames'])
+            company_item['legal_tag'] = join_list_of_element(item['company_page']['data']['legalTagNames'])
 
             # 公司縣市
-            parsed_item['company_addr_dist'] = item['company_page']['data']['addrNoDesc']
+            # parsed_item['company_addr_dist'] = item['company_page']['data']['addrNoDesc']
+            company_item['company_addr_dist'] = item['company_page']['data']['addrNoDesc']
 
             # 公司地點
-            parsed_item['company_addr'] = item['company_page']['data']['address']
+            # parsed_item['company_addr'] = item['company_page']['data']['address']
+            company_item['company_addr'] = item['company_page']['data']['address']
 
             # 公司地區 (derived)
-            company_addr = parsed_item['company_addr']
-            parsed_item['company_addr_area'] = convert_addr_to_area(company_addr)
+            company_addr = item['company_page']['data']['address']
+            # parsed_item['company_addr_area'] = convert_addr_to_area(company_addr)
+            company_item['company_addr_area'] = convert_addr_to_area(company_addr)
 
             # 公司集團 (derived)
             company_name = parsed_item['company_name']
-            parsed_item['company_group'] = convert_company_name_to_company_group(company_name)
+            # parsed_item['company_group'] = convert_company_name_to_company_group(company_name)
+            company_item['company_group'] = convert_company_name_to_company_group(company_name)
 
         except Exception as e:
             print(e)
 
-        return parsed_item
+        return parsed_item, company_item
 
 
 def get_language_requirement(language_list):
