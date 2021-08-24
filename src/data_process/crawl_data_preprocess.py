@@ -529,7 +529,7 @@ class CrawlDataJsonProcessor:
             # add parsed data to dataframe
             if len(result_df) == 0:
                 result_df = item_df
-            result_df = result_df.append(item_df, ignore_index=True)
+            result_df = result_df.append(item_df, ignore_index=True, sort=False)
 
         print(f'>>> Total Jobs: {len(result_df)}')
         return result_df
