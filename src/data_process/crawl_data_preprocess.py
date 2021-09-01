@@ -836,7 +836,7 @@ class CrawlDataJsonProcessor:
         # Company Page
         # If skip crawling company page, then return "parsed_item".
         if 'company_page' not in item.keys():
-            return parsed_item
+            return parsed_item, None
         try:
             # 產業描述
             # parsed_item['industry_desc'] = item['company_page']['data']['industryDesc']
