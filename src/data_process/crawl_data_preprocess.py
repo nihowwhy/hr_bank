@@ -16,299 +16,299 @@ from reference.hr_bank_code_mapping import MAPPING
 TODAY_DATE = int(datetime.now().strftime('%Y%m%d'))
 
 
-class CrawlDataProcessor:
-
-    def __init__(self, **kwarg):
-        ''' "process_date"(int)-> default: Today Date, 0 means process all data, or YYYYMMDD
-        '''
-
-        # get the date which want to process data, if "process_date"=0, it means process all data.
-        if 'process_all_date' in kwarg.keys():
-            if kwarg['process_all_date'] == True:
-                self.process_date = 0
-        elif 'process_date' in kwarg.keys():
-            self.process_date = int(kwarg['process_date'])
-        else:
-            self.process_date = TODAY_DATE
-
-        # database connection
-        self.db_connect()
-
-
-    def db_connect(self):
-        engine = db_connect(DB_CONNECTION_STRING)
-        create_table(engine)
-        self.Session = sessionmaker(bind=engine)
-
-
-    def process(self):
-        self.process_t_job()
-        self.process_t_job_batch()
-        self.process_t_company()
-        self.process_t_dashboard()
-
-
-    def process_t_job(self):
-        # update job data according to "process_date"
-
-        session = self.Session()
-
-        # Filter process data by "process_date".
-        if self.process_date:
-            results = session.query(TJob).filter_by(crawl_date=self.process_date)
-        else:
-            results = session.query(TJob)
-
-        # process job data
-        for result in results:
-            try:
-                # 需求人數
-                need_count_desc = result.need_count_desc
-                need_count_max, need_count_min = get_need_count_max_and_min(need_count_desc)
-                need_count = int((need_count_max + need_count_min) / 2)
-                result.need_count_max = need_count_max
-                result.need_count_min = need_count_min
-                result.need_count = need_count
-
-                # 薪資類型
-                salary_type = result.salary_type
-                result.salary_type_desc = convert_salary_type_code_to_desc(salary_type)
-
-                # 估算薪水
-                salary_max = result.salary_max
-                salary_min = result.salary_min
-                salary = convert_salary_to_estimated_monthly_salary(salary_min, salary_max, salary_type)
-                result.salary = salary
-
-                # 工作類型
-                # todo
-                job_role = result.job_role
-                result.job_role_desc = convert_job_role_code_to_desc(job_role)
-
-                # 工作地區
-                job_addr_dist = result.job_addr_dist
-                result.job_addr_area = convert_addr_to_area(job_addr_dist)
-
-                # 開缺時間長度
-                appear_date = result.appear_date
-                first_crawl_date = result.first_crawl_date
-                start_date_int = min(appear_date, first_crawl_date)
-                end_date_int = result.crawl_date
-                result.job_duration_day = calculate_duration_day(start_date_int, end_date_int)
+# class CrawlDataProcessor:
+
+#     def __init__(self, **kwarg):
+#         ''' "process_date"(int)-> default: Today Date, 0 means process all data, or YYYYMMDD
+#         '''
+
+#         # get the date which want to process data, if "process_date"=0, it means process all data.
+#         if 'process_all_date' in kwarg.keys():
+#             if kwarg['process_all_date'] == True:
+#                 self.process_date = 0
+#         elif 'process_date' in kwarg.keys():
+#             self.process_date = int(kwarg['process_date'])
+#         else:
+#             self.process_date = TODAY_DATE
+
+#         # database connection
+#         self.db_connect()
+
+
+#     def db_connect(self):
+#         engine = db_connect(DB_CONNECTION_STRING)
+#         create_table(engine)
+#         self.Session = sessionmaker(bind=engine)
+
+
+#     def process(self):
+#         self.process_t_job()
+#         self.process_t_job_batch()
+#         self.process_t_company()
+#         self.process_t_dashboard()
+
+
+#     def process_t_job(self):
+#         # update job data according to "process_date"
+
+#         session = self.Session()
+
+#         # Filter process data by "process_date".
+#         if self.process_date:
+#             results = session.query(TJob).filter_by(crawl_date=self.process_date)
+#         else:
+#             results = session.query(TJob)
+
+#         # process job data
+#         for result in results:
+#             try:
+#                 # 需求人數
+#                 need_count_desc = result.need_count_desc
+#                 need_count_max, need_count_min = get_need_count_max_and_min(need_count_desc)
+#                 need_count = int((need_count_max + need_count_min) / 2)
+#                 result.need_count_max = need_count_max
+#                 result.need_count_min = need_count_min
+#                 result.need_count = need_count
+
+#                 # 薪資類型
+#                 salary_type = result.salary_type
+#                 result.salary_type_desc = convert_salary_type_code_to_desc(salary_type)
+
+#                 # 估算薪水
+#                 salary_max = result.salary_max
+#                 salary_min = result.salary_min
+#                 salary = convert_salary_to_estimated_monthly_salary(salary_min, salary_max, salary_type)
+#                 result.salary = salary
+
+#                 # 工作類型
+#                 # todo
+#                 job_role = result.job_role
+#                 result.job_role_desc = convert_job_role_code_to_desc(job_role)
+
+#                 # 工作地區
+#                 job_addr_dist = result.job_addr_dist
+#                 result.job_addr_area = convert_addr_to_area(job_addr_dist)
+
+#                 # 開缺時間長度
+#                 appear_date = result.appear_date
+#                 first_crawl_date = result.first_crawl_date
+#                 start_date_int = min(appear_date, first_crawl_date)
+#                 end_date_int = result.crawl_date
+#                 result.job_duration_day = calculate_duration_day(start_date_int, end_date_int)
 
-                # 職缺分類
-                # todo
+#                 # 職缺分類
+#                 # todo
 
-            except Exception as e:
-                print(e)
-
-        session.commit()
-        session.close()
-
-
-    def process_t_job_batch(self):
-        # update job exist information
-
-        session = self.Session()
-
-        max_crawl_date = session.query(func.max(TJob.crawl_date)).scalar()
-        results = session.query(TJob)
-
-        # process job data
-        for result in results:
-            try:
-                # 結束時間、職缺存在
-                crawl_date = result.crawl_date
-                if crawl_date == max_crawl_date:
-                    is_job_exist = 'Y'
-                    close_date = None
-                else:
-                    is_job_exist = 'N'
-                    close_date = crawl_date
-                result.close_date = close_date
-                result.is_job_exist = is_job_exist
-
-            except Exception as e:
-                print(e)
-
-        session.commit()
-        session.close()
-
-
-    def process_t_company(self):
-        session = self.Session()
-
-        # Filter process data by "process_date".
-        if self.process_date:
-            results = session.query(TCompany).filter_by(crawl_date=self.process_date)
-        else:
-            results = session.query(TCompany)
-
-        # process job data
-        for result in results:
-            try:
-                # 公司地區
-                company_addr = result.company_addr
-                result.company_addr_area = convert_addr_to_area(company_addr)
-
-                # 公司集團
-                company_name = result.company_name
-                result.company_group = convert_company_name_to_company_group(company_name)
-
-            except Exception as e:
-                print(e)
-
-        session.commit()
-        session.close()
-
-
-    def process_t_dashboard(self):
-
-        session = self.Session()
-
-        # Filter process data by "process_date".
-        if self.process_date:
-            max_update_date = session.query(func.max(TJobAnalysis.update_date)).scalar()
-            min_update_date = self.process_date
-        else:
-            max_update_date = session.query(func.max(TJobAnalysis.update_date)).scalar()
-            min_update_date = session.query(func.min(TJobAnalysis.update_date)).scalar()
-            print(f'Date Range: {min_update_date} ~ {max_update_date}')
-
-        # get start window date
-        start_window_date = get_last_monday_date(min_update_date)
-        # start_window_date = timedelta_date_int(max_update_date, days=-30) # default: last 30 days
-
-        # get end window date
-        end_window_date = timedelta_date_int(start_window_date, days=6)
-
-        # get weeks between start-window-date and max-update-date
-        weeks = calculate_weeks_between_two_date(convert_int_to_date(start_window_date), convert_int_to_date(max_update_date))
-
-        # query "job_id" in job analysis, which "update_date" is larger than "start_window_date".
-        results = session.query(TJobAnalysis).filter(TJobAnalysis.update_date >= start_window_date).all()
-        select_job_ids = [result.job_id for result in results]
-
-        # loop every week within date range
-        for _ in range(weeks + 1):
-
-            print(f'Process Date: {start_window_date} ~ {end_window_date}')
-
-            for select_job_id in select_job_ids:
-
-                # query job analysis date between "start_window_date" and "end_window_date"
-                result = session.query(
-                            TJobAnalysis, TJob
-                        ).filter(
-                            (TJobAnalysis.job_id == select_job_id) & (TJob.job_id == select_job_id)
-                        ).filter(
-                            (TJobAnalysis.update_date >= start_window_date) & (TJobAnalysis.update_date <= end_window_date)
-                        ).filter(
-                            TJobAnalysis.job_id == TJob.job_id # resolve cartesian product problem
-                        ).first()
-
-                if result is None:
-                    continue
-
-                job_no = result.TJobAnalysis.job_no
-                job_id = result.TJobAnalysis.job_id
-                represent_date = start_window_date
-
-                # get table object
-                t_dashboard_session = self.Session()
-                t_dashboard = t_dashboard_session.query(TDashboard).filter_by(job_no=job_no, job_id=job_id, represent_date=represent_date).first()
-
-                # upsert data
-                is_data_exist = bool(t_dashboard)
-                try:
-                    if is_data_exist == False:
-                        t_dashboard = TDashboard()
-                        t_dashboard.job_no = job_no
-                        t_dashboard.job_id = job_id
-                        t_dashboard.represent_date = represent_date
-
-                    # represent date range
-                    t_dashboard.represent_date_min = start_window_date
-                    t_dashboard.represent_date_max = end_window_date
-
-                    # job, company
-                    t_dashboard.job_name = result.TJobAnalysis.job_name
-                    t_dashboard.company_id = result.TJob.company_id
-                    t_dashboard.company_no = result.TJob.company_no
-                    t_dashboard.company_name = result.TJob.company_name
-
-                    # salary, need_count, apply_count
-                    t_dashboard.salary = result.TJob.salary
-                    t_dashboard.need_count = result.TJob.need_count
-                    t_dashboard.apply_count = result.TJob.apply_count
-
-                    # sex
-                    t_dashboard.sex_male = get_count_from_json('男', result.TJobAnalysis.sex_json)
-                    t_dashboard.sex_female = get_count_from_json('女', result.TJobAnalysis.sex_json)
-
-                    # education
-                    t_dashboard.edu_junior = get_count_from_json('國中(含)以下', result.TJobAnalysis.edu_json)
-                    t_dashboard.edu_senior = get_count_from_json('高中職', result.TJobAnalysis.edu_json) + get_count_from_json('專科', result.TJobAnalysis.edu_json)
-                    t_dashboard.edu_undergrad = get_count_from_json('大學', result.TJobAnalysis.edu_json)
-                    t_dashboard.edu_grad = get_count_from_json('博碩士', result.TJobAnalysis.edu_json)
-
-                    # age
-                    t_dashboard.age_00_20 = get_count_from_json('20歲以下', result.TJobAnalysis.age_json)
-                    t_dashboard.age_21_25 = get_count_from_json('21~25歲', result.TJobAnalysis.age_json)
-                    t_dashboard.age_26_30 = get_count_from_json('26~30歲', result.TJobAnalysis.age_json)
-                    t_dashboard.age_31_35 = get_count_from_json('31~35歲', result.TJobAnalysis.age_json)
-                    t_dashboard.age_36_40 = get_count_from_json('36~40歲', result.TJobAnalysis.age_json)
-                    t_dashboard.age_41_45 = get_count_from_json('41~45歲', result.TJobAnalysis.age_json)
-                    t_dashboard.age_46_50 = get_count_from_json('46~50歲', result.TJobAnalysis.age_json)
-                    t_dashboard.age_51_55 = get_count_from_json('51~55歲', result.TJobAnalysis.age_json)
-                    t_dashboard.age_56_60 = get_count_from_json('56~60歲', result.TJobAnalysis.age_json)
-                    t_dashboard.age_60_99 = get_count_from_json('60歲以上', result.TJobAnalysis.age_json)
-
-                    # work experience
-                    t_dashboard.work_exp_0 = get_count_from_json('無工作經驗', result.TJobAnalysis.work_exp_json)
-                    t_dashboard.work_exp_00_01 = get_count_from_json('1年以下', result.TJobAnalysis.work_exp_json)
-                    t_dashboard.work_exp_01_03 = get_count_from_json('1~3年 ', result.TJobAnalysis.work_exp_json)
-                    t_dashboard.work_exp_03_05 = get_count_from_json('3~5年', result.TJobAnalysis.work_exp_json)
-                    t_dashboard.work_exp_05_10 = get_count_from_json('5~10年', result.TJobAnalysis.work_exp_json)
-                    t_dashboard.work_exp_10_15 = get_count_from_json('10~15年', result.TJobAnalysis.work_exp_json)
-                    t_dashboard.work_exp_15_20 = get_count_from_json('15~20年', result.TJobAnalysis.work_exp_json)
-                    t_dashboard.work_exp_20_25 = get_count_from_json('20~25年', result.TJobAnalysis.work_exp_json)
-                    t_dashboard.work_exp_25_99 = get_count_from_json('25年以上', result.TJobAnalysis.work_exp_json)
-
-                    # major
-                    t_dashboard.major_info_mgmt = get_count_from_json('資訊管理相關', result.TJobAnalysis.major_json)
-                    t_dashboard.major_cs = get_count_from_json('資訊工程相關', result.TJobAnalysis.major_json)
-                    t_dashboard.major_stat = get_count_from_json('統計學相關', result.TJobAnalysis.major_json)
-                    t_dashboard.major_math_stat = get_count_from_json('數理統計相關', result.TJobAnalysis.major_json)
-
-                    # skill
-                    t_dashboard.skill_java = get_count_from_json('Java', result.TJobAnalysis.skill_json)
-                    t_dashboard.skill_python = get_count_from_json('Python', result.TJobAnalysis.skill_json)
-
-                    # language
-                    t_dashboard.lang_eng = get_count_from_json('英文', result.TJobAnalysis.lang_json)
-                    t_dashboard.lang_japan = get_count_from_json('日文', result.TJobAnalysis.lang_json)
-                    t_dashboard.lang_korean = get_count_from_json('韓文', result.TJobAnalysis.lang_json)
-
-                    # time info
-                    t_dashboard.crawl_date = result.TJobAnalysis.crawl_date
-                    t_dashboard.update_date = result.TJobAnalysis.update_date
-
-                    if is_data_exist == False:
-                        t_dashboard_session.add(t_dashboard)
-                    t_dashboard_session.commit()
-
-                except Exception as e:
-                    print(e)
-
-                finally:
-                    t_dashboard_session.close()
-
-            # moving window dates by 7 days
-            start_window_date = timedelta_date_int(start_window_date, days=7)
-            end_window_date = timedelta_date_int(end_window_date, days=7)
-
-        session.close()
+#             except Exception as e:
+#                 print(e)
+
+#         session.commit()
+#         session.close()
+
+
+#     def process_t_job_batch(self):
+#         # update job exist information
+
+#         session = self.Session()
+
+#         max_crawl_date = session.query(func.max(TJob.crawl_date)).scalar()
+#         results = session.query(TJob)
+
+#         # process job data
+#         for result in results:
+#             try:
+#                 # 結束時間、職缺存在
+#                 crawl_date = result.crawl_date
+#                 if crawl_date == max_crawl_date:
+#                     is_job_exist = 'Y'
+#                     close_date = None
+#                 else:
+#                     is_job_exist = 'N'
+#                     close_date = crawl_date
+#                 result.close_date = close_date
+#                 result.is_job_exist = is_job_exist
+
+#             except Exception as e:
+#                 print(e)
+
+#         session.commit()
+#         session.close()
+
+
+#     def process_t_company(self):
+#         session = self.Session()
+
+#         # Filter process data by "process_date".
+#         if self.process_date:
+#             results = session.query(TCompany).filter_by(crawl_date=self.process_date)
+#         else:
+#             results = session.query(TCompany)
+
+#         # process job data
+#         for result in results:
+#             try:
+#                 # 公司地區
+#                 company_addr = result.company_addr
+#                 result.company_addr_area = convert_addr_to_area(company_addr)
+
+#                 # 公司集團
+#                 company_name = result.company_name
+#                 result.company_group = convert_company_name_to_company_group(company_name)
+
+#             except Exception as e:
+#                 print(e)
+
+#         session.commit()
+#         session.close()
+
+
+#     def process_t_dashboard(self):
+
+#         session = self.Session()
+
+#         # Filter process data by "process_date".
+#         if self.process_date:
+#             max_update_date = session.query(func.max(TJobAnalysis.update_date)).scalar()
+#             min_update_date = self.process_date
+#         else:
+#             max_update_date = session.query(func.max(TJobAnalysis.update_date)).scalar()
+#             min_update_date = session.query(func.min(TJobAnalysis.update_date)).scalar()
+#             print(f'Date Range: {min_update_date} ~ {max_update_date}')
+
+#         # get start window date
+#         start_window_date = get_last_monday_date(min_update_date)
+#         # start_window_date = timedelta_date_int(max_update_date, days=-30) # default: last 30 days
+
+#         # get end window date
+#         end_window_date = timedelta_date_int(start_window_date, days=6)
+
+#         # get weeks between start-window-date and max-update-date
+#         weeks = calculate_weeks_between_two_date(convert_int_to_date(start_window_date), convert_int_to_date(max_update_date))
+
+#         # query "job_id" in job analysis, which "update_date" is larger than "start_window_date".
+#         results = session.query(TJobAnalysis).filter(TJobAnalysis.update_date >= start_window_date).all()
+#         select_job_ids = [result.job_id for result in results]
+
+#         # loop every week within date range
+#         for _ in range(weeks + 1):
+
+#             print(f'Process Date: {start_window_date} ~ {end_window_date}')
+
+#             for select_job_id in select_job_ids:
+
+#                 # query job analysis date between "start_window_date" and "end_window_date"
+#                 result = session.query(
+#                             TJobAnalysis, TJob
+#                         ).filter(
+#                             (TJobAnalysis.job_id == select_job_id) & (TJob.job_id == select_job_id)
+#                         ).filter(
+#                             (TJobAnalysis.update_date >= start_window_date) & (TJobAnalysis.update_date <= end_window_date)
+#                         ).filter(
+#                             TJobAnalysis.job_id == TJob.job_id # resolve cartesian product problem
+#                         ).first()
+
+#                 if result is None:
+#                     continue
+
+#                 job_no = result.TJobAnalysis.job_no
+#                 job_id = result.TJobAnalysis.job_id
+#                 represent_date = start_window_date
+
+#                 # get table object
+#                 t_dashboard_session = self.Session()
+#                 t_dashboard = t_dashboard_session.query(TDashboard).filter_by(job_no=job_no, job_id=job_id, represent_date=represent_date).first()
+
+#                 # upsert data
+#                 is_data_exist = bool(t_dashboard)
+#                 try:
+#                     if is_data_exist == False:
+#                         t_dashboard = TDashboard()
+#                         t_dashboard.job_no = job_no
+#                         t_dashboard.job_id = job_id
+#                         t_dashboard.represent_date = represent_date
+
+#                     # represent date range
+#                     t_dashboard.represent_date_min = start_window_date
+#                     t_dashboard.represent_date_max = end_window_date
+
+#                     # job, company
+#                     t_dashboard.job_name = result.TJobAnalysis.job_name
+#                     t_dashboard.company_id = result.TJob.company_id
+#                     t_dashboard.company_no = result.TJob.company_no
+#                     t_dashboard.company_name = result.TJob.company_name
+
+#                     # salary, need_count, apply_count
+#                     t_dashboard.salary = result.TJob.salary
+#                     t_dashboard.need_count = result.TJob.need_count
+#                     t_dashboard.apply_count = result.TJob.apply_count
+
+#                     # sex
+#                     t_dashboard.sex_male = get_count_from_json('男', result.TJobAnalysis.sex_json)
+#                     t_dashboard.sex_female = get_count_from_json('女', result.TJobAnalysis.sex_json)
+
+#                     # education
+#                     t_dashboard.edu_junior = get_count_from_json('國中(含)以下', result.TJobAnalysis.edu_json)
+#                     t_dashboard.edu_senior = get_count_from_json('高中職', result.TJobAnalysis.edu_json) + get_count_from_json('專科', result.TJobAnalysis.edu_json)
+#                     t_dashboard.edu_undergrad = get_count_from_json('大學', result.TJobAnalysis.edu_json)
+#                     t_dashboard.edu_grad = get_count_from_json('博碩士', result.TJobAnalysis.edu_json)
+
+#                     # age
+#                     t_dashboard.age_00_20 = get_count_from_json('20歲以下', result.TJobAnalysis.age_json)
+#                     t_dashboard.age_21_25 = get_count_from_json('21~25歲', result.TJobAnalysis.age_json)
+#                     t_dashboard.age_26_30 = get_count_from_json('26~30歲', result.TJobAnalysis.age_json)
+#                     t_dashboard.age_31_35 = get_count_from_json('31~35歲', result.TJobAnalysis.age_json)
+#                     t_dashboard.age_36_40 = get_count_from_json('36~40歲', result.TJobAnalysis.age_json)
+#                     t_dashboard.age_41_45 = get_count_from_json('41~45歲', result.TJobAnalysis.age_json)
+#                     t_dashboard.age_46_50 = get_count_from_json('46~50歲', result.TJobAnalysis.age_json)
+#                     t_dashboard.age_51_55 = get_count_from_json('51~55歲', result.TJobAnalysis.age_json)
+#                     t_dashboard.age_56_60 = get_count_from_json('56~60歲', result.TJobAnalysis.age_json)
+#                     t_dashboard.age_60_99 = get_count_from_json('60歲以上', result.TJobAnalysis.age_json)
+
+#                     # work experience
+#                     t_dashboard.work_exp_0 = get_count_from_json('無工作經驗', result.TJobAnalysis.work_exp_json)
+#                     t_dashboard.work_exp_00_01 = get_count_from_json('1年以下', result.TJobAnalysis.work_exp_json)
+#                     t_dashboard.work_exp_01_03 = get_count_from_json('1~3年 ', result.TJobAnalysis.work_exp_json)
+#                     t_dashboard.work_exp_03_05 = get_count_from_json('3~5年', result.TJobAnalysis.work_exp_json)
+#                     t_dashboard.work_exp_05_10 = get_count_from_json('5~10年', result.TJobAnalysis.work_exp_json)
+#                     t_dashboard.work_exp_10_15 = get_count_from_json('10~15年', result.TJobAnalysis.work_exp_json)
+#                     t_dashboard.work_exp_15_20 = get_count_from_json('15~20年', result.TJobAnalysis.work_exp_json)
+#                     t_dashboard.work_exp_20_25 = get_count_from_json('20~25年', result.TJobAnalysis.work_exp_json)
+#                     t_dashboard.work_exp_25_99 = get_count_from_json('25年以上', result.TJobAnalysis.work_exp_json)
+
+#                     # major
+#                     t_dashboard.major_info_mgmt = get_count_from_json('資訊管理相關', result.TJobAnalysis.major_json)
+#                     t_dashboard.major_cs = get_count_from_json('資訊工程相關', result.TJobAnalysis.major_json)
+#                     t_dashboard.major_stat = get_count_from_json('統計學相關', result.TJobAnalysis.major_json)
+#                     t_dashboard.major_math_stat = get_count_from_json('數理統計相關', result.TJobAnalysis.major_json)
+
+#                     # skill
+#                     t_dashboard.skill_java = get_count_from_json('Java', result.TJobAnalysis.skill_json)
+#                     t_dashboard.skill_python = get_count_from_json('Python', result.TJobAnalysis.skill_json)
+
+#                     # language
+#                     t_dashboard.lang_eng = get_count_from_json('英文', result.TJobAnalysis.lang_json)
+#                     t_dashboard.lang_japan = get_count_from_json('日文', result.TJobAnalysis.lang_json)
+#                     t_dashboard.lang_korean = get_count_from_json('韓文', result.TJobAnalysis.lang_json)
+
+#                     # time info
+#                     t_dashboard.crawl_date = result.TJobAnalysis.crawl_date
+#                     t_dashboard.update_date = result.TJobAnalysis.update_date
+
+#                     if is_data_exist == False:
+#                         t_dashboard_session.add(t_dashboard)
+#                     t_dashboard_session.commit()
+
+#                 except Exception as e:
+#                     print(e)
+
+#                 finally:
+#                     t_dashboard_session.close()
+
+#             # moving window dates by 7 days
+#             start_window_date = timedelta_date_int(start_window_date, days=7)
+#             end_window_date = timedelta_date_int(end_window_date, days=7)
+
+#         session.close()
 
 
 # T_JOB =========================================
@@ -471,18 +471,18 @@ from config.config import LOG_FOLDER, DB_CONNECTION_STRING, DATA_FOLDER
 
 class CrawlDataJsonProcessor:
 
-    def __init__(self, **kwarg):
+    def __init__(self, **kwargs):
         '''
         param: process_date (int) -> default is Today Date, 0 means process all data, or YYYYMMDD
         param: process_all_date (bool) -> If True, then process all data.
         '''
 
         # get the date which want to process data, if "process_date"=0, it means process all data.
-        if 'process_all_date' in kwarg.keys():
-            if kwarg['process_all_date'] == True:
+        if 'process_all_date' in kwargs.keys():
+            if kwargs['process_all_date'] == True:
                 self.process_date = 0
-        elif 'process_date' in kwarg.keys():
-            self.process_date = int(kwarg['process_date'])
+        elif 'process_date' in kwargs.keys():
+            self.process_date = int(kwargs['process_date'])
         else:
             self.process_date = TODAY_DATE
 
@@ -490,9 +490,13 @@ class CrawlDataJsonProcessor:
         self.data_folder = DATA_FOLDER
         self.raw_data_folder = os.path.join(DATA_FOLDER, 'raw_data')
         self.excel_data_folder = os.path.join(DATA_FOLDER, 'excel_data')
+        self.output_filename = kwargs['filename']
+
+        # setting parameters
+        self.delete_raw_data = kwargs.get('delete_raw_data', False)
 
 
-    def process(self, **kwarg):
+    def process(self, **kwargs):
         # filter json files
         self.raw_data_filepaths = self.get_raw_data_filepath_list()
 
@@ -500,17 +504,19 @@ class CrawlDataJsonProcessor:
         job_result_df, company_result_df = self.convert_json_data_to_dataframe()
 
         # save job dataframe to excel
-        job_output_filename = f'{self.process_date}_job_output.xlsx'
+        filename = self.output_filename
+        job_output_filename = f'{filename}_job_{self.process_date}.xlsx'
         output_path = os.path.join(self.excel_data_folder, job_output_filename)
         self.save_dataframe_to_excel(job_result_df, output_path)
 
         # save company dataframe to excel
-        company_output_filename = f'{self.process_date}_company_output.xlsx'
+        company_output_filename = f'{filename}_company_{self.process_date}.xlsx'
         output_path = os.path.join(self.excel_data_folder, company_output_filename)
         self.save_dataframe_to_excel(company_result_df, output_path)
 
         # if delete json data files
         # todo
+        print(f'>>> TODO: "delete_raw_data" is {self.delete_raw_data}')
 
 
     def get_raw_data_filepath_list(self):

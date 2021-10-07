@@ -40,10 +40,11 @@ class HrBankSpider(scrapy.Spider):
 
 
     def start_requests(self):
-        urls = [
-            # 'https://www.104.com.tw/jobs/search/?ro=0&keyword=python',
-            'https://www.104.com.tw/jobs/search/?ro=0&keyword=python&expansionType=area%2Cspec%2Ccom%2Cjob%2Cwf%2Cwktm&area=6001004000&order=15&asc=0&page=1&mode=s'
-        ]
+        # urls = [
+        #     'https://www.104.com.tw/jobs/search/?ro=0&keyword=python&expansionType=area%2Cspec%2Ccom%2Cjob%2Cwf%2Cwktm&area=6001004000&order=15&asc=0&page=1&mode=s'
+        # ]
+        urls = self.start_urls
+
         for url in urls:
             # format and subdivide url
             url_processor = StartUrlProcessor()

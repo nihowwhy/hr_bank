@@ -26,7 +26,16 @@ if not os.path.exists(LOG_FOLDER):
     os.makedirs(LOG_FOLDER)
 if not os.path.exists(DB_FOLDER):
     os.makedirs(DB_FOLDER)
-# todo: raw json folders
+if not os.path.exists(DATA_FOLDER):
+    os.makedirs(DATA_FOLDER)
+
+# output "raw_data, excel_data" directory
+EXCEL_DATA_FOLDER = os.path.join(DATA_FOLDER, 'excel_data')
+RAW_DATA_FOLDER = os.path.join(DATA_FOLDER, 'raw_data')
+if not os.path.exists(EXCEL_DATA_FOLDER):
+    os.makedirs(EXCEL_DATA_FOLDER)
+if not os.path.exists(RAW_DATA_FOLDER):
+    os.makedirs(RAW_DATA_FOLDER)
 
 
 
