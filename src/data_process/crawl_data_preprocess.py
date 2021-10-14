@@ -4,12 +4,12 @@ sys.path.append('.')
 
 import re
 import json
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import and_, func
+# from sqlalchemy.orm import sessionmaker
+# from sqlalchemy import and_, func
 from datetime import datetime, timedelta
 
-from model.model import db_connect, create_table, TJob, TJobAnalysis, TCompany, TDashboard
-from config.config import DB_CONNECTION_STRING
+# from model.model import db_connect, create_table, TJob, TJobAnalysis, TCompany, TDashboard
+# from config.config import DB_CONNECTION_STRING
 from reference.hr_bank_code_mapping import MAPPING
 
 
@@ -380,8 +380,13 @@ def convert_salary_to_estimated_monthly_salary(salary_min, salary_max, salary_ty
 
 
 # 工作類型
+def convert_job_type_code_to_desc(job_type):
+    job_type_mapping = MAPPING['job_type_mapping']
+    return job_type_mapping.get(job_type, job_type)
+
+
+# 工作形式
 def convert_job_role_code_to_desc(job_role):
-    # todo
     job_role_mapping = MAPPING['job_role_mapping']
     return job_role_mapping.get(job_role, job_role)
 
@@ -647,14 +652,17 @@ class CrawlDataJsonProcessor:
             # 職缺說明
             parsed_item['job_desc'] = item['search_page']['description']
 
-            # 職缺類別
+            # 工作類型code
             parsed_item['job_type'] = item['search_page']['jobType']
+
+            # 工作類型 (derived)
+            job_type = parsed_item['job_type']
+            parsed_item['job_type_desc'] = convert_job_type_code_to_desc(job_type)
 
             # 工作類型code
             parsed_item['job_role'] = item['search_page']['jobRole']
 
-            # 工作類型 (derived)
-            # todo
+            # 工作形式 (derived)
             job_role = parsed_item['job_role']
             parsed_item['job_role_desc'] = convert_job_role_code_to_desc(job_role)
 

@@ -11,6 +11,7 @@ config.read(CONFIG_INI_DIR)
 
 # config.ini info
 PROJECT_NAME = config['info']['project_name']
+print(f'>>> Loading... "config.py"')
 print(f'>>> PROJECT NAME: {PROJECT_NAME}')
 
 
@@ -29,13 +30,20 @@ if not os.path.exists(DB_FOLDER):
 if not os.path.exists(DATA_FOLDER):
     os.makedirs(DATA_FOLDER)
 
-# output "raw_data, excel_data" directory
+# output "raw_data, excel_data, dashboard_data" directory
 EXCEL_DATA_FOLDER = os.path.join(DATA_FOLDER, 'excel_data')
 RAW_DATA_FOLDER = os.path.join(DATA_FOLDER, 'raw_data')
+DASHBOARD_DATA_FOLDER = os.path.join(DATA_FOLDER, 'dashboard_data')
 if not os.path.exists(EXCEL_DATA_FOLDER):
     os.makedirs(EXCEL_DATA_FOLDER)
 if not os.path.exists(RAW_DATA_FOLDER):
     os.makedirs(RAW_DATA_FOLDER)
+if not os.path.exists(DASHBOARD_DATA_FOLDER):
+    os.makedirs(DASHBOARD_DATA_FOLDER)
+
+DASHBOARD_DATA_RECORD_PATH = os.path.join(DASHBOARD_DATA_FOLDER, 'dashboard_data_record.pkl')
+if not os.path.exists(DASHBOARD_DATA_RECORD_PATH):
+    os.makedirs(DASHBOARD_DATA_RECORD_PATH)
 
 
 

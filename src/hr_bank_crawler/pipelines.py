@@ -10,11 +10,11 @@ import re
 import json
 # from itemadapter import ItemAdapter
 from datetime import datetime
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import and_
+# from sqlalchemy.orm import sessionmaker
+# from sqlalchemy import and_
 from scrapy.utils.project import get_project_settings
 
-from model.model import db_connect, create_table, TJob, TJobAnalysis, TCompany
+# from model.model import db_connect, create_table, TJob, TJobAnalysis, TCompany
 
 SETTINGS = get_project_settings()
 DB_CONNECTION_STRING = SETTINGS.get('DB_CONNECTION_STRING')
