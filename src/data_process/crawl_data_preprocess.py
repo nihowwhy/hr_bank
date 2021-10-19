@@ -547,6 +547,13 @@ class CrawlDataJsonProcessor:
                 j = f.read()
                 item = json.loads(j)
 
+            # set "crawl_date"
+            if self.process_date != 0:
+                crawl_date = self.process_date
+            else:
+                crawl_date = TODAY_DATE
+            item['crawl_date'] = crawl_date
+
             # parse json data
             job_item, company_item = self.parse_item(item)
             job_item = self.filter_result_dataframe_columns(job_item)
@@ -912,6 +919,9 @@ class CrawlDataJsonProcessor:
 
         except Exception as e:
             print(e)
+
+        parsed_item['crawl_date'] = item['crawl_date']
+        company_item['crawl_date'] = item['crawl_date']
 
         return parsed_item, company_item
 

@@ -49,7 +49,7 @@ class DashDatabaseProcessor:
         company_excel_filenames_to_process.sort(key=lambda x: x.split('_')[-1], reverse=True)
 
         # read excel data
-        self.update_job_data_in_db(job_excel_filenames_to_process)
+        self.update_job_data_in_db(job_excel_filenames_to_process, 'T_JOB')
 
         # update data from new to old file (eliminate redundant update)
 
@@ -86,21 +86,30 @@ class DashDatabaseProcessor:
         return list(set(excel_filenames_in_folder) - set(saved_excel_filenames))
 
 
-    def update_job_data_in_db(self, excel_filenames):
+    def update_job_data_in_db(self, excel_filenames, table_name):
+        insert_df = pd.DataFrame()
         for excel_filename in excel_filenames:
             excel_path = os.path.join(EXCEL_DATA_FOLDER, excel_filename)
             excel_df = pd.read_excel(excel_path)
             excel_columns = [col.upper() for col in excel_df.columns]
             excel_df.columns = excel_columns
-            print(excel_df.columns)
+
+            if len(insert_df) == 0:
+                insert_df = excel_df
+            elif table_name == 'T_JOB':
+                new_data_df = excel_df[~excel_df['JOB_ID'].isin(insert_df['JOB_ID'])]
+                insert_df = pd.concat([insert_df, new_data_df], axis=0, ignore_index=True)
+            elif table_name == 'T_COMPANY':
+                new_data_df = excel_df[~excel_df['COMPANY_ID'].isin(insert_df['COMPANY_ID'])]
+                insert_df = pd.concat([insert_df, new_data_df], axis=0, ignore_index=True)
+
 
             # session = self.Session()
             # session.close()
             table_columns = [col.key for col in TJob.__table__.columns]
             insert_table_columns = list(set.intersection(set(excel_columns), set(table_columns)))
-            insert_df = excel_df[insert_table_columns]
-            insert_df.to_sql('T_JOB', con=self.engine, if_exists='replace', index=False)
-            break
+            insert_db_df = insert_df[insert_table_columns]
+            insert_db_df.to_sql(table_name, con=self.engine, if_exists='replace', index=False)
 
 
 

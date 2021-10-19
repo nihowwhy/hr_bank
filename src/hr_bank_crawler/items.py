@@ -9,6 +9,7 @@ import scrapy
 class HrBankCrawlerItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
+    schedule_filename = scrapy.Field()
     search_page = scrapy.Field()
     job_page = scrapy.Field()
     analysis_page = scrapy.Field()
