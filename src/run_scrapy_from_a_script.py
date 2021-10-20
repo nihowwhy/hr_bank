@@ -43,13 +43,20 @@ def run(**kwargs):
 
     # crawl data
     print(f'>>> Start Crawling...')
+    start_time = datetime.now()
     crawl_hr_bank_website(start_urls=start_urls, filename=filename)
     print('>>> Crawling Job Done!')
+    execution_time = datetime.now() - start_time
+    print(f'>>> Excecution time: {execution_time}')
 
     # process crawl data
     print(f'>>> Start Process Data...')
+    start_time = datetime.now()
     crawl_data_processor = CrawlDataJsonProcessor(process_date=process_date, filename=filename)  # "process_date"(int)-> default: Today Date, 0 means process all data, or YYYYMMDD
     crawl_data_processor.process()
+    print('>>> Data Processing Done!')
+    execution_time = datetime.now() - start_time
+    print(f'>>> Excecution time: {execution_time}')
 
 
 if __name__ == '__main__':
