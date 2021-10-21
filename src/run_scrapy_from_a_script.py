@@ -52,7 +52,7 @@ def run(**kwargs):
     # process crawl data
     print(f'>>> Start Process Data...')
     start_time = datetime.now()
-    crawl_data_processor = CrawlDataJsonProcessor(process_date=process_date, filename=filename)  # "process_date"(int)-> default: Today Date, 0 means process all data, or YYYYMMDD
+    crawl_data_processor = CrawlDataJsonProcessor(process_date=process_date, filename=filename, delete_raw_data=True)  # "process_date"(int)-> default: Today Date, 0 means process all data, or YYYYMMDD
     crawl_data_processor.process()
     print('>>> Data Processing Done!')
     execution_time = datetime.now() - start_time

@@ -485,6 +485,7 @@ class CrawlDataJsonProcessor:
         '''
         param: process_date (int) -> default is Today Date, 0 means process all data, or YYYYMMDD
         param: process_all_date (bool) -> If True, then process all data.
+        param: delete_raw_data (bool) -> Delete raw data which processed this time.
         '''
 
         # get the date which want to process data, if "process_date"=0, it means process all data.
@@ -526,7 +527,22 @@ class CrawlDataJsonProcessor:
 
         # if delete json data files
         # todo
-        print(f'>>> TODO: "delete_raw_data" is {self.delete_raw_data}')
+        self.delete_raw_data_in_folder()
+
+
+    def delete_raw_data_in_folder(self):
+        if self.delete_raw_data == False:
+            print(f'>>> "delete_raw_data" is {self.delete_raw_data}')
+            return
+        try:
+            print('>>> Deleting raw data...')
+            for filepath in self.raw_data_filepaths:
+                os.remove(filepath)
+        except OSError as e:
+            print(e)
+            print('>>> Delete raw data Failed.')
+        else:
+            print('>>> Delete raw data successfully.')
 
 
     def get_raw_data_filepath_list(self):
