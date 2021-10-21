@@ -15,6 +15,8 @@ class HrBankCrawlerItem(scrapy.Item):
     analysis_page = scrapy.Field()
     company_page = scrapy.Field()
 
+    crawl_date = scrapy.Field()
+
     job_ajax_link = scrapy.Field()
     analysis_ajax_link = scrapy.Field()
     company_ajax_link = scrapy.Field()

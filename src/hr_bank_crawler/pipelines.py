@@ -591,6 +591,7 @@ class HrBankCrawlerJsonPipeline:
             # key value
             job_id = re.search('job\/(.*)\?', item['search_page']['link']['job']).group(1)
             crawl_date = TODAY_DATE
+            item['crawl_date'] = crawl_date
 
             # filename
             filename = f'{crawl_date}_{job_id}.json'

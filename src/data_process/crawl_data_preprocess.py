@@ -697,6 +697,9 @@ class CrawlDataJsonProcessor:
 
             # 出現日期
             parsed_item['appear_date'] = int(item['search_page']['appearDate'])
+
+            # 爬蟲日期
+            parsed_item['crawl_date'] = item['crawl_date']
         except Exception as e:
             print(e)
 
@@ -916,6 +919,9 @@ class CrawlDataJsonProcessor:
             company_name = parsed_item['company_name']
             # parsed_item['company_group'] = convert_company_name_to_company_group(company_name)
             company_item['company_group'] = convert_company_name_to_company_group(company_name)
+
+            # 爬蟲日期
+            company_item['crawl_date'] = item['crawl_date']
 
         except Exception as e:
             print(e)
