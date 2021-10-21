@@ -400,6 +400,11 @@ def convert_addr_to_area(addr):
     return addr_area_mapping.get(addr_mapping_text, addr_mapping_text)
 
 
+# 產業編號
+def convert_industry_no_code_to_desc(industry_no):
+    return MAPPING['industry_no_mapping'].get(industry_no, industry_no)
+
+
 # 開缺時間長度
 def calculate_duration_day(start_date_int: int, end_date_int: int) -> int:
     start_date = datetime.strptime(str(start_date_int), '%Y%m%d')
@@ -546,13 +551,6 @@ class CrawlDataJsonProcessor:
             with open(filepath, 'r') as f:
                 j = f.read()
                 item = json.loads(j)
-
-            # set "crawl_date"
-            if self.process_date != 0:
-                crawl_date = self.process_date
-            else:
-                crawl_date = TODAY_DATE
-            item['crawl_date'] = crawl_date
 
             # parse json data
             job_item, company_item = self.parse_item(item)
@@ -768,8 +766,14 @@ class CrawlDataJsonProcessor:
             parsed_item['start_work_day'] = item['job_page']['data']['jobDetail']['startWorkingDay']
 
             # 產業編號
-            parsed_item['industry_no'] = item['job_page']['data']['industryNo']
-            company_item['industry_no'] = item['job_page']['data']['industryNo']
+            industry_no = item['job_page']['data']['industryNo']
+            parsed_item['industry_no'] = industry_no
+            company_item['industry_no'] = industry_no
+
+            # 產業編號desc (derived)
+            industry_no_desc = convert_industry_no_code_to_desc(industry_no)
+            parsed_item['industry_no_desc'] = industry_no_desc
+            company_item['industry_no_desc'] = industry_no_desc
 
             # 職缺分類 (derived)
             # todo
