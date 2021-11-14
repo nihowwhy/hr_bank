@@ -581,8 +581,8 @@ DATA_FOLDER = SETTINGS.get('DATA_FOLDER')
 class HrBankCrawlerJsonPipeline:
 
     def __init__(self):
-        self.save_folder = DATA_FOLDER
-        self.raw_data_folder = os.path.join(self.save_folder, 'raw_data')
+        self.data_folder = DATA_FOLDER
+        self.raw_data_folder = os.path.join(self.data_folder, 'raw_data')
 
 
     def process_item(self, item, spider):
@@ -595,7 +595,15 @@ class HrBankCrawlerJsonPipeline:
 
             # filename
             filename = f'{crawl_date}_{job_id}.json'
-            filepath = os.path.join(self.raw_data_folder, filename)
+
+            # save folder path
+            schedule_filename = item['schedule_filename']
+            save_folder_path = os.path.join(self.raw_data_folder, schedule_filename)
+            if not os.path.exists(save_folder_path):
+                os.makedirs(save_folder_path)
+
+            # save file(raw data) path
+            filepath = os.path.join(save_folder_path, filename)
             is_file_exist = os.path.exists(filepath)
 
             # save json

@@ -498,10 +498,16 @@ class CrawlDataJsonProcessor:
             self.process_date = TODAY_DATE
 
         # setting path
-        self.data_folder = DATA_FOLDER
-        self.raw_data_folder = os.path.join(DATA_FOLDER, 'raw_data')
-        self.excel_data_folder = os.path.join(DATA_FOLDER, 'excel_data')
         self.output_filename = kwargs['filename']
+        self.data_folder = DATA_FOLDER
+
+        raw_data_folder = os.path.join(DATA_FOLDER, 'raw_data')
+        self.raw_data_folder = os.path.join(raw_data_folder, self.output_filename)
+        create_folder_path(self.raw_data_folder)
+
+        excel_data_folder = os.path.join(DATA_FOLDER, 'excel_data')
+        self.excel_data_folder = os.path.join(excel_data_folder, self.output_filename)
+        create_folder_path(self.excel_data_folder)
 
         # setting parameters
         self.delete_raw_data = kwargs.get('delete_raw_data', False)
@@ -1068,6 +1074,12 @@ def join_list_of_element(l: list) -> str:
         output: "A、B、C"
     '''
     return '、'.join(l)
+
+
+def create_folder_path(folder_path):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    return None
 # =================================================
 
 

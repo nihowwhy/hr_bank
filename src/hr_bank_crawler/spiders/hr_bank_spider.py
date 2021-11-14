@@ -1,6 +1,7 @@
 import scrapy
 import json
 import re
+import os
 import requests
 import unicodedata
 from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
@@ -9,6 +10,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from hr_bank_crawler.items import HrBankCrawlerItem
+
 
 MAX_TOTAL_PAGE = 150
 DEFAULT_QUERY_PARAM = {
@@ -37,17 +39,14 @@ class HrBankSpider(scrapy.Spider):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.filename = kwargs['filename']
+        self.schedule_filename = kwargs['filename']
 
 
     def start_requests(self):
         # urls = [
         #     'https://www.104.com.tw/jobs/search/?ro=0&keyword=python&expansionType=area%2Cspec%2Ccom%2Cjob%2Cwf%2Cwktm&area=6001004000&order=15&asc=0&page=1&mode=s'
         # ]
-        schedule_filename = self.filename
-        print()
-        print(f'{schedule_filename}')
-        print()
+        self.schedule_filename
         urls = self.start_urls
 
         for url in urls:
@@ -79,6 +78,9 @@ class HrBankSpider(scrapy.Spider):
         for job in job_list:
             # init item
             item = HrBankCrawlerItem() # scrapy item
+
+            # crawl job name
+            item['schedule_filename'] = self.schedule_filename
 
             # set search page (one job) to item
             item['search_page'] = job
