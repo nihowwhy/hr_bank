@@ -79,7 +79,7 @@ class HrBankSpider(scrapy.Spider):
             # init item
             item = HrBankCrawlerItem() # scrapy item
 
-            # crawl job name
+            # set schedule name
             item['schedule_filename'] = self.schedule_filename
 
             # set search page (one job) to item

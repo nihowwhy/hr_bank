@@ -1,10 +1,10 @@
 import os
 
-CONFIG_INI_DIR = 'config/config.ini'
 
-
+# load config from "config.ini"
 # config.ini
 import configparser
+CONFIG_INI_DIR = 'config/config.ini'
 config = configparser.ConfigParser()
 config.read(CONFIG_INI_DIR)
 

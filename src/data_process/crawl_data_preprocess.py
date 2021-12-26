@@ -432,13 +432,13 @@ def get_last_monday_date(date_int):
 
 
 def convert_date_to_int(date):
-    ''' From datetime.datetime(2021, 7, 19, 0, 0) to 20210719
+    ''' Transform datetime.datetime(2021, 7, 19, 0, 0) to (int)20210719
     '''
     return int(date.strftime('%Y%m%d'))
 
 
 def convert_int_to_date(date_int):
-    ''' From 20210719 to datetime.datetime(2021, 7, 19, 0, 0)
+    ''' Transform (int)20210719 to datetime.datetime(2021, 7, 19, 0, 0)
     '''
     year = int(date_int / 10000)
     month = int(date_int / 100) % 100
@@ -1051,7 +1051,7 @@ def format_option_analysis_dict(analysis_dict, analysis_type):
                 has_record_value = True
                 formatted_analysis_dict[sequence_num] = {}
 
-        if has_record_value:
+        if has_record_value == True:
             formatted_analysis_dict[sequence_num][record_name_no] = record_count
             formatted_analysis_dict[sequence_num][record_name_desc] = record_count
             sequence_num += 1

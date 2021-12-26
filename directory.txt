@@ -20,3 +20,8 @@ db
 - hr_bank_raw_data_db
 - report_db
 - dashboard_db
+
+
+> 2021.12.12
+"hr_bank_crawler": 爬取資料，儲存為json
+input: 爬取的網址list、儲存的類別名稱，例如：
