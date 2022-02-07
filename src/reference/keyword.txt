@@ -1,0 +1,361 @@
+project leader
+project manager
+java
+java script
+javascript
+mvc
+net
+asp
+python
+html
+css
+jquery
+machine learning
+deep learning
+oracle
+big data
+spring
+springboot
+spring boot
+sql
+sql server
+ccna
+ccnp
+ccie
+sas
+sap
+app
+web
+系統分析
+架構師
+architect
+ui
+ux
+stored procedure
+blockchain
+c++
+cent os
+linux
+資安
+資訊安全
+aix
+windows server
+資料庫
+cisco
+db2
+dba
+db
+etl
+dbms
+dev
+devops
+ops
+agile
+docker
+container
+etl
+framework
+fraud
+hadoop
+infra
+infrastructure
+jboss
+jenkins
+objective
+object
+gcp
+ajax
+android
+ios
+swift
+dafka
+project management
+專案管理
+red hat
+redhat
+regtech
+rhce
+scrum
+sharepoint
+tableau
+vm
+vmare
+程式設計
+雲計算
+雲端
+人工智慧
+數位金融
+客群經營
+平台規劃
+大數據分析
+新興支付
+粉絲團經營
+資訊企劃
+數位金融
+金融科技
+react
+web
+tomcat
+系統應用程式
+程式設計師
+系統維護
+系統維運
+vb
+單元測試
+開發架構
+測試計畫
+問題排除
+uat
+團隊合作
+業務需求
+系統優化
+溝通協調
+功能檢測
+整合測試
+整合設計
+核心系統
+windows
+網路管理
+網管
+解決問題
+故障排除
+環境建置
+備份機制
+plsql
+電子商務
+網頁
+使用者 經驗
+firewall
+防火牆
+mis
+ifrs
+integration
+後端
+前端
+網站
+演算法
+algorithm
+application
+儲備幹部
+ma
+主管
+專案經理
+深度 學習
+機器 學習
+實習
+實習生
+工讀
+工讀生
+助理
+資料 倉儲
+data mart
+nlp
+ba
+自然 語言 處理
+平台
+機電
+mobile
+app
+安卓
+蘋果
+bios
+影像 處理
+聲音 處理
+聲紋 處理
+ext js
+js
+security
+analytic
+excel srevice
+micro
+macro
+stat
+statistic
+statistics
+統計
+稽核
+audit
+dev
+developer
+development
+伺服器
+主機
+自動化
+rpa
+standard
+大數據
+數據
+data scientist
+business
+analysis
+django
+flask
+cloud
+maintenance
+行動 裝置
+研究
+研發
+react
+git
+team leader
+business intelligence
+digital product designer
+computer vision
+電腦視覺
+engineer
+auditor
+tester
+xml
+api
+ad
+advertisement
+報表
+report
+smart query
+reporting
+database
+data warehouse
+知識
+經驗
+system analyst
+switch
+router
+弱掃
+弱點 掃描
+防毒
+滲透 測試
+spark
+hive
+數據 探勘
+eda
+exploratory data analysis
+explore
+eco
+system
+用戶 體驗
+客戶
+預警
+告警
+ci
+cd
+敏捷 開發
+風險 控管
+管理
+進度 追蹤
+資源 協調
+resource
+tcp
+ip
+socket
+交易
+模組
+vue
+vuejs
+svn
+邏輯
+rest
+restful
+交換器
+路由器
+思考
+建議書
+visual studio
+mssql
+bootstrap
+hybrid
+治理
+發展
+規劃
+software
+hardware
+中階
+高階
+兼職
+助理
+工程師
+solution
+人員
+assistant
+介面
+interface
+ai
+人才
+客服
+customer
+user
+總務
+平台
+platform
+help
+help desk
+network
+基礎 設施
+品質
+quality
+control
+monitor
+監控
+商品
+產品
+product
+方案
+專案
+儲備
+金融
+finance
+fin
+fintech
+操作
+operation
+operator
+op
+ops
+操作員
+technology
+科技
+證券
+証券
+保險
+insurance
+核保
+理賠
+保全
+客利
+量化
+期貨
+風控
+risk
+internet
+資深
+資訊
+法金
+ios app
+布版
+版控
+行政
+流程
+flow
+類別
+系統開發
+uiux
+一般
+op
+數據分析
+ba
+資訊主管
+系統規劃
+pm
+fintech
+資訊助理
+ai機器學習
+資料庫管理
+資安
+網管
+其他
+app
+測試工程師
+系統管理
+工讀生
+稽核
+業務架構
+業務規劃

@@ -27,8 +27,8 @@ def crawl_hr_bank_website(**kwargs):
     # })
     process = CrawlerProcess(settings)
     process.crawl('104', start_urls=start_urls, filename=filename) # "104" is the spider name
-    process.start()      # the script will block here until the crawling is finished
-
+    process.start() # the script will block here until the crawling is finished
+    # process.start(stop_after_crawl=False)
 
 def run(**kwargs):
     # get parameters

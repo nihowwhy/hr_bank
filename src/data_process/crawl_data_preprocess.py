@@ -619,7 +619,7 @@ class CrawlDataJsonProcessor:
 
     @staticmethod
     def save_dataframe_to_excel(output_df, output_path):
-        with pd.ExcelWriter(output_path, options={'strings_to_urls': False}) as writer:
+        with pd.ExcelWriter(output_path, options={'strings_to_urls': False}, engine='xlsxwriter') as writer:
             output_df.to_excel(writer, index=False, encoding='utf8')
 
 
